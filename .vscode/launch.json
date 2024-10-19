@@ -7,8 +7,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-c",
-                "output.star"
+                "-cf",
+                "output.star",
+                "test.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

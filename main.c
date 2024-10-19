@@ -59,13 +59,8 @@ int main(int argc, char *argv[])
                 // TODO : validate that the file is not already in the free blocks
                 // TODO : add the file to the table
                 File *file = newFile(argv[j]);
-
-                int sourceFD = open(file->name, O_RDONLY);
-                if (sourceFD == -1)
-                {
-                    printf("Error: opening source file '%s'.\n", file->name);
-                    continue;
-                }
+                openFile(file);
+                // TODO : ADD file to tableFile
 
                 // TODO : read the file and add it to the table
                 areFiles = 1;

@@ -1,4 +1,10 @@
 {
-    "C_Cpp.default.compilerPath": "/usr/bin/gcc-11",
-    "C_Cpp.errorSquiggles": "enabled"
+    "files.associations": {
+        "loginfo.h": "c",
+        "functions.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "time.h": "c",
+        "unistd.h": "c"
+    }
 }

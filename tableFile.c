@@ -8,11 +8,6 @@ TableFile *newTableFile()
         return NULL;
     }
 
-    for (int i = 0; i < FILES_NUM; i++)
-    {
-        tableFile->Files[i] = newFile(NULL);
-    }
-
     tableFile->FreeBlocks = NULL;
 
     return tableFile;

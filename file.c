@@ -36,10 +36,11 @@ void openFile(File *file)
     int sourceFD = open(file->name, O_RDONLY);
     if (sourceFD == -1)
     {
-        printf("Error: opening source file.\n", file->name);
+        printf("Error: opening source file '%s'.\n", file->name);
         return;
     }
 
+    // ??? WOULD IT BE CORRECT TO USE A BUFFER OF 256KB?
     char buffer[BLOCK_SIZE];
 
     while (1)
@@ -51,16 +52,43 @@ void openFile(File *file)
         }
         if (bytesRead == -1)
         {
-            printf("Error: reading source file.\n", file->name);
+            printf("Error: reading source file '%s'.\n", file->name);
             close(sourceFD);
             break;
         }
-        
-        // TODO : creat a new block and add it to the file
+
+        struct FileBlock *fileBlock = newFileBlock(buffer, bytesRead);
+        addBlock(file, fileBlock);
     }
 }
 
-FileBlock *newFileBlock()
+void addBlock(File *file, struct FileBlock *block)
+{
+    if (file == NULL)
+    {
+        printf("Error: File is null for addBlock\n");
+        return;
+    }
+
+    if (block == NULL)
+    {
+        printf("Error: Block is null for addBlock\n");
+        return;
+    }
+
+    if (file->Head == NULL)
+    {
+        file->Head = block;
+        file->Tail = block;
+    }
+    else
+    {
+        file->Tail->next = block;
+        file->Tail = block;
+    }
+}
+
+struct FileBlock *newFileBlock(char data[BLOCK_SIZE], ssize_t bytesRead)
 {
     FileBlock *fileBlock = (FileBlock *)malloc(sizeof(FileBlock));
     if (fileBlock == NULL)
@@ -68,10 +96,11 @@ FileBlock *newFileBlock()
         return NULL;
     }
 
+    // Copy data into fileBlock->data
+    memcpy(fileBlock->data, data, BLOCK_SIZE);
+    fileBlock->size = bytesRead;
     fileBlock->next = NULL;
-    fileBlock->index = 0;
+    // fileBlock->index = 0;
 
     return fileBlock;
 }
-
-void openFil

@@ -9,7 +9,8 @@
 
 typedef struct
 {
-    File *Files[FILES_NUM];
+    // TODO : change to a dynamic array
+    File *Files;
     File *FreeBlocks;
 } TableFile;
 
