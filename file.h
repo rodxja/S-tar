@@ -14,16 +14,21 @@ typedef struct File
     struct FileBlock *Tail;
 } File;
 
+// newFile creates a new File struct and opens the file with the given name
 File *newFile(char *name);
+void openFile(File *file);
+// TODO : peding to implement
+void addBlock(File *file, FileBlock *block);
 
 typedef struct
 {
     char data[BLOCK_SIZE]; // Pointer to the block of data
-    // size_t size;  // Size of the data in this block (could be less than 256 KB for the last block)
-    size_t index; // Index of the block in the sequence of blocks (optional)
+    // NULL in all cases where block is full
+    // otherwise, it will specify 
+    int *offset;
     struct FileBlock *next;
 } FileBlock;
 
-FileBlock *newFileBlock();
+FileBlock *newFileBlock(char data[BLOCK_SIZE]);
 
 #endif // FILE_H
