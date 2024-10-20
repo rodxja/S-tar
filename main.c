@@ -4,6 +4,7 @@
 #include <fcntl.h>
 
 #include "tableFile.h"
+#include "file.h" //Se añada esto
 
 int main(int argc, char *argv[])
 {
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
                 printf("Error: no se pudo cargar el archivo %s\n", argv[2]);
                 return 1;
             }
-            extractFile(tableFile, argv[3]);
+            extractFile(tableFile, "output");
             break;
 
         // case 'f':
