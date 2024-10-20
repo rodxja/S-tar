@@ -1,4 +1,8 @@
+#include <fcntl.h>
+#include <string.h>
+
 #include "tableFile.h"
+#include "verbose.h"
 
 TableFile *newTableFile()
 {
@@ -7,8 +11,12 @@ TableFile *newTableFile()
     {
         return NULL;
     }
-
-    tableFile->FreeBlocks = NULL;
+    for (int i = 0; i < FILES_NUM; i++)
+    {
+        tableFile->files[i] = NULL;
+    }
+    tableFile->freeBlocks = NULL;
+    tableFile->filesCount = 0;
 
     return tableFile;
 }
@@ -20,39 +28,171 @@ void writeTableFile(TableFile *tableFile, char *outputFile)
     FILE *file = fopen(outputFile, "w");
     if (file == NULL)
     {
-        printf("Error: No se pudo abrir el archivo %s\n", outputFile);
+        logError("Error: No se pudo abrir el archivo %s\n", outputFile);
         return;
     }
 
     int result = fwrite(tableFile, sizeof(TableFile), 1, file);
     if (result == 0)
     {
-        printf("Error writing to the given file\n");
+        logError("Error writing to the given file\n");
         exit(1);
     }
     else
     {
-        printf("TableFile is written to the file successfully!\n");
+        logError("TableFile is written to the file successfully!\n");
     }
 
     fclose(file);
 }
 
+void addFile(TableFile *tableFile, char *name)
+{
+    if (tableFile == NULL)
+    {
+        logError("Error: TableFile is null for addFile\n");
+        return;
+    }
+
+    if (tableFile->filesCount == FILES_NUM)
+    {
+        logError("Error: TableFile is full\n");
+        return;
+    }
+
+    if (name == NULL)
+    {
+        logError("Error: File name is null for addFile\n");
+        return;
+    }
+
+    int sourceFD = open(name, O_RDONLY);
+    if (sourceFD == -1)
+    {
+        logError("Error: opening source file '%s'.\n", name);
+        return;
+    }
+
+    // ??? WOULD IT BE CORRECT TO USE A BUFFER OF 256KB?
+    char buffer[BLOCK_SIZE];
+
+    File *file = getFileToUse(tableFile);
+    setNameFile(file, name);
+    while (1)
+    {
+        ssize_t bytesRead = read(sourceFD, buffer, sizeof(buffer));
+        if (bytesRead == 0)
+        { // End of file
+            break;
+        }
+        if (bytesRead == -1)
+        {
+            logError("Error: reading source file '%s'.\n", name);
+            close(sourceFD);
+            break;
+        }
+
+        struct FileBlock *fileBlock = getFileBlockToUse(tableFile);
+        setFileBlockData(fileBlock, buffer, bytesRead);
+        addBlock(file, fileBlock);
+    }
+
+    // TODO : return error code
+    tableFile->files[tableFile->filesCount] = file;
+    tableFile->filesCount++;
+    close(sourceFD);
+}
+
+// this retrieves the file to use
+File *getFileToUse(TableFile *tableFile)
+{
+    // TODO : implement a way to detect deleted files
+    return newFile(NULL);
+}
+
+// this retrieves the file block to use
+// it is taken from the free blocks list if there is any
+// otherwise a new block is created
+struct FileBlock *getFileBlockToUse(TableFile *tableFile)
+{
+    struct FileBlock *fileBlock = getFreeBlock(tableFile->freeBlocks);
+    if (fileBlock != NULL)
+    {
+        return fileBlock;
+    }
+    return newFileBlock();
+}
+
+int fileExists(TableFile *tableFile, char *fileName)
+{
+    for (int i = 0; i < tableFile->filesCount; i++) // this will not be correct due that there will be deleted files, iterate with while or some other way
+    {
+        if (tableFile->files[i] == NULL)
+        {
+            continue;
+        }
+        if (tableFile->files[i]->name == NULL)
+        {
+            continue;
+        }
+        if (strcmp(tableFile->files[i]->name, fileName) == 0)
+        {
+            return 1;
+        }
+    }
+    return 0;
+}
 TableFile *loadTableFile(char *inputFile)
 {
     FILE *file = fopen(inputFile, "r");
-    if (file == NULL) {
-        printf("Error: No se pudo abrir el archivo %s\n", inputFile);
+    if (file == NULL)
+    {
+        logError("Error: No se pudo abrir el archivo %s\n", inputFile);
         return NULL;
     }
 
     TableFile *tableFile = (TableFile *)malloc(sizeof(TableFile));
-    if(fread(tableFile, sizeof(TableFile), 1, file) == 0) {
-        printf("Error reading from the given file\n", inputFile);
+    if (fread(tableFile, sizeof(TableFile), 1, file) == 0)
+    {
+        logError("Error reading from the given file\n", inputFile);
         fclose(file);
         return NULL;
     }
 
     fclose(file);
     return tableFile;
+}
+
+void extractFile(TableFile *tableFile, char *outputDirectory)
+{
+    // extract all valid files
+    // TODO : this iteration will not be correct due that there will be deleted files, iterate with while or some other way
+    for (int i = 0; i < tableFile->filesCount; i++)
+    {
+        File *file = tableFile->files[i];
+        if (file == NULL || file->name == NULL || file->head == NULL)
+        {
+            continue;
+        }
+
+        char outputPath[256];
+        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
+
+        FILE *outputFile = fopen(outputPath, "w");
+        if (outputFile == NULL)
+        {
+            logError("Error: No se pudo abrir el archivo %s\n", outputPath);
+            return;
+        }
+
+        FileBlock *currentBlock = file->head;
+        while (currentBlock != NULL)
+        {
+            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
+            currentBlock = currentBlock->next;
+        }
+
+        fclose(outputFile);
+        logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
+    }
 }

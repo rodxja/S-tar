@@ -1,44 +1,58 @@
 #include <fcntl.h>
 
-#include "file.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
-#include "tableFile.h" 
+#include "file.h"
+#include "verbose.h"
 
-File *newFile(char *name)
+File *newFile()
 {
     File *file = (File *)malloc(sizeof(File));
+
+    file->name = NULL;
+    file->head = NULL;
+    file->tail = NULL;
+
+    return file;
+}
+
+void setNameFile(File *file, char *name)
+{
     if (file == NULL)
     {
-        return NULL;
+        logError("Error: File is null for setNameFile\n");
+        return;
+    }
+
+    if (name == NULL)
+    {
+        logError("Error: Name is null for setNameFile\n");
+        return;
     }
 
     file->name = name;
-    file->Head = NULL;
-    file->Tail = NULL;
-
-    return file;
 }
 
 void openFile(File *file)
 {
     if (file == NULL)
     {
-        printf("Error: File is null for openFile\n");
+        logError("Error: File is null for openFile\n");
         return;
     }
 
     if (file->name == NULL)
     {
-        printf("Error: File name is null for openFile\n");
+        logError("Error: File name is null for openFile\n");
         return;
     }
 
     int sourceFD = open(file->name, O_RDONLY);
     if (sourceFD == -1)
     {
-        printf("Error: opening source file '%s'.\n", file->name);
+        logError("Error: opening source file '%s'.\n", file->name);
         return;
     }
 
@@ -54,7 +68,7 @@ void openFile(File *file)
         }
         if (bytesRead == -1)
         {
-            printf("Error: reading source file '%s'.\n", file->name);
+            logError("Error: reading source file '%s'.\n", file->name);
             close(sourceFD);
             break;
         }
@@ -68,69 +82,78 @@ void addBlock(File *file, struct FileBlock *block)
 {
     if (file == NULL)
     {
-        printf("Error: File is null for addBlock\n");
+        logError("Error: File is null for addBlock\n");
         return;
     }
 
     if (block == NULL)
     {
-        printf("Error: Block is null for addBlock\n");
+        logError("Error: Block is null for addBlock\n");
         return;
     }
 
-    if (file->Head == NULL)
+    if (file->head == NULL)
     {
-        file->Head = block;
-        file->Tail = block;
+        file->head = block;
+        file->tail = block;
     }
     else
     {
-        file->Tail->next = block;
-        file->Tail = block;
+        file->tail->next = block;
+        file->tail = block;
     }
 }
 
-struct FileBlock *newFileBlock(char data[BLOCK_SIZE], ssize_t bytesRead)
+struct FileBlock *newFileBlock()
 {
     FileBlock *fileBlock = (FileBlock *)malloc(sizeof(FileBlock));
-    if (fileBlock == NULL)
-    {
-        return NULL;
-    }
 
-    // Copy data into fileBlock->data
-    memcpy(fileBlock->data, data, BLOCK_SIZE);
-    fileBlock->size = bytesRead;
+    fileBlock->size = 0;
     fileBlock->next = NULL;
-    // fileBlock->index = 0;
 
     return fileBlock;
 }
 
-void extractFile(TableFile *tableFile, char *outputDirectory){
-    for (int i = 0; i < FILES_NUM; i++){
-        File *file = &tableFile->Files[i];
-        if (file->name == NULL || file->Head == NULL) {
-            continue;
-        }
-
-        char outputPath[256];
-        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
-
-        FILE *outputFile = fopen(outputPath, "w");
-        if (outputFile == NULL) {
-            printf("Error: No se pudo abrir el archivo %s\n", outputPath);
-            return;
-        }
-
-        FileBlock *currentBlock = file->Head;
-        while (currentBlock != NULL)
-        {
-            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
-            currentBlock = currentBlock->next;
-        }
-
-        fclose(outputFile);
-        printf("El archivo %s ha sido extraído con éxito!\n", file->name);
+void setFileBlockData(struct FileBlock *fileBlock, char data[BLOCK_SIZE], ssize_t bytesRead)
+{
+    if (fileBlock == NULL)
+    {
+        logError("Error: FileBlock is null for setFileBlockData\n");
+        return;
     }
+
+    if (data == NULL)
+    {
+        logError("Error: Data is null for setFileBlockData\n");
+        return;
+    }
+
+    if (bytesRead < 0)
+    {
+        logError("Error: bytesRead is negative for setFileBlockData\n");
+        return;
+    }
+
+    memcpy(fileBlock->data, data, bytesRead);
+    fileBlock->size = bytesRead;
+}
+
+struct FileBlock *getFreeBlock(File *file)
+{
+    if (file == NULL)
+    {
+        logError("Error: File is null for getFreeBlock\n");
+        return NULL;
+    }
+
+    if (file->head == NULL)
+    {
+        logError("Error: File has no blocks for getFreeBlock\n");
+        return NULL;
+    }
+
+    struct FileBlock *freeBlock = file->head;
+    file->head = file->head->next;
+
+    return freeBlock;
 }

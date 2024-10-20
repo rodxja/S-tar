@@ -10,6 +10,7 @@
                 "main.c",
                 "tableFile.c",
                 "file.c",
+                "verbose.c",
                 "-o",
                 "a.out"
             ],
