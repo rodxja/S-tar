@@ -142,3 +142,56 @@ int fileExists(TableFile *tableFile, char *fileName)
     }
     return 0;
 }
+TableFile *loadTableFile(char *inputFile)
+{
+    FILE *file = fopen(inputFile, "r");
+    if (file == NULL)
+    {
+        logError("Error: No se pudo abrir el archivo %s\n", inputFile);
+        return NULL;
+    }
+
+    TableFile *tableFile = (TableFile *)malloc(sizeof(TableFile));
+    if (fread(tableFile, sizeof(TableFile), 1, file) == 0)
+    {
+        logError("Error reading from the given file\n", inputFile);
+        fclose(file);
+        return NULL;
+    }
+
+    fclose(file);
+    return tableFile;
+}
+
+void extractFile(TableFile *tableFile, char *outputDirectory)
+{
+    // extract all valid files
+    for (int i = 0; i < tableFile->filesCount; i++)
+    {
+        File *file = tableFile->files[i];
+        if (file == NULL || file->name == NULL || file->head == NULL)
+        {
+            continue;
+        }
+
+        char outputPath[256];
+        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
+
+        FILE *outputFile = fopen(outputPath, "w");
+        if (outputFile == NULL)
+        {
+            logError("Error: No se pudo abrir el archivo %s\n", outputPath);
+            return;
+        }
+
+        FileBlock *currentBlock = file->head;
+        while (currentBlock != NULL)
+        {
+            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
+            currentBlock = currentBlock->next;
+        }
+
+        fclose(outputFile);
+        logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
+    }
+}

@@ -2,7 +2,6 @@
 #define TABLEINFO_H
 
 #include <stdlib.h>
-
 #include "file.h"
 
 #define FILES_NUM 250
@@ -24,5 +23,7 @@ File *getFileToUse(TableFile *tableFile);
 struct FileBlock *getFileBlockToUse(TableFile *tableFile);
 
 int fileExists(TableFile *tableFile, char *fileName);
+TableFile *loadTableFile(char *inputFile);
+void extractFile(TableFile *tableFile, char *outputDirectory);
 
 #endif // TABLEINFO_H

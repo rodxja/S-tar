@@ -50,7 +50,6 @@ int main(int argc, char *argv[])
             // if c is the only option, write the table file and exit
 
             break;
-
         case 'f':
             // TODO : validate that there are files to add
             int areFiles = 0;
@@ -76,11 +75,21 @@ int main(int argc, char *argv[])
                 logError("Error: no files to add\n");
                 return 1;
             }
-
+            extractFile(tableFile, "output");
             break;
 
         case 'v': // verbose
             logLevel++;
+            break;
+
+        case 'x':
+            tableFile = loadTableFile(argv[2]);
+            if (tableFile == NULL)
+            {
+                logError("Error: no se pudo cargar el archivo %s\n", argv[2]);
+                return 1;
+            }
+            extractFile(tableFile, ".");
             break;
 
         default:
