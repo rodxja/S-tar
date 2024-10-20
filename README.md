@@ -31,4 +31,3 @@ e.g.:
 ## TODO
 
 - implement -v option
-- handle create(c) in its own option

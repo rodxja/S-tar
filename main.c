@@ -4,10 +4,11 @@
 #include <fcntl.h>
 
 #include "tableFile.h"
+#include "verbose.h"
 
 int main(int argc, char *argv[])
 {
-    printf("argc: %d\n", argc);
+    logAll("argc: %d\n", argc);
     // argv[0] will store the command name 'star'
     // argv[1] will store the option (e.g. -cvf)
     // argv[2] will store the output file name
@@ -18,26 +19,27 @@ int main(int argc, char *argv[])
     if (argc < 3)
     {
         // TODO : update usage
-        printf("Usage: star <opciones> <archivoSalida>\n");
+        logAll("Usage: star <opciones> <archivoSalida>\n");
         return 1;
     }
 
     // Check if options are valid
     if (argv[1][0] != '-')
     {
-        printf("Error: no valid option '%s'\n", argv[1]);
+        logAll("Error: no valid option '%s'\n", argv[1]);
         return 1;
     }
 
     // Check if output file is valid
     if (argv[2] == NULL)
     {
-        printf("Error: no valid output file\n");
+        logAll("Error: no valid output file\n");
         return 1;
     }
 
     TableFile *tableFile;
 
+    // TODO : first catch which actions to do, then do them
     for (int i = 1; i < strlen(argv[1]); i++)
     {
         switch (argv[1][i])
@@ -60,7 +62,7 @@ int main(int argc, char *argv[])
                 // TODO : validate that the file is not already in the table
                 if (fileExists(tableFile, fileName))
                 {
-                    printf("Error: file '%s' already exists\n", fileName);
+                    logError("Error: file '%s' already exists\n", fileName);
                     return 1;
                 }
                 // TODO : validate that the file is not already in the free blocks
@@ -71,14 +73,18 @@ int main(int argc, char *argv[])
             }
             if (!areFiles)
             {
-                printf("Error: no files to add\n");
+                logError("Error: no files to add\n");
                 return 1;
             }
 
             break;
 
+        case 'v': // verbose
+            logLevel++;
+            break;
+
         default:
-            printf("Error: no valid option '%c' in '%s'\n", argv[1][i], argv[1]);
+            logError("Error: no valid option '%c' in '%s'\n", argv[1][i], argv[1]);
             return 1;
         }
     }

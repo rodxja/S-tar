@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "tableFile.h"
+#include "verbose.h"
 
 TableFile *newTableFile()
 {
@@ -27,19 +28,19 @@ void writeTableFile(TableFile *tableFile, char *outputFile)
     FILE *file = fopen(outputFile, "w");
     if (file == NULL)
     {
-        printf("Error: No se pudo abrir el archivo %s\n", outputFile);
+        logError("Error: No se pudo abrir el archivo %s\n", outputFile);
         return;
     }
 
     int result = fwrite(tableFile, sizeof(TableFile), 1, file);
     if (result == 0)
     {
-        printf("Error writing to the given file\n");
+        logError("Error writing to the given file\n");
         exit(1);
     }
     else
     {
-        printf("TableFile is written to the file successfully!\n");
+        logError("TableFile is written to the file successfully!\n");
     }
 
     fclose(file);
@@ -49,26 +50,26 @@ void addFile(TableFile *tableFile, char *name)
 {
     if (tableFile == NULL)
     {
-        printf("Error: TableFile is null for addFile\n");
+        logError("Error: TableFile is null for addFile\n");
         return;
     }
 
     if (tableFile->filesCount == FILES_NUM)
     {
-        printf("Error: TableFile is full\n");
+        logError("Error: TableFile is full\n");
         return;
     }
 
     if (name == NULL)
     {
-        printf("Error: File name is null for addFile\n");
+        logError("Error: File name is null for addFile\n");
         return;
     }
 
     int sourceFD = open(name, O_RDONLY);
     if (sourceFD == -1)
     {
-        printf("Error: opening source file '%s'.\n", name);
+        logError("Error: opening source file '%s'.\n", name);
         return;
     }
 
@@ -86,7 +87,7 @@ void addFile(TableFile *tableFile, char *name)
         }
         if (bytesRead == -1)
         {
-            printf("Error: reading source file '%s'.\n", name);
+            logError("Error: reading source file '%s'.\n", name);
             close(sourceFD);
             break;
         }

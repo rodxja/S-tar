@@ -32,7 +32,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-cf",
+                "-vcf",
                 "output.star",
                 "test.txt",
                 "file.h"

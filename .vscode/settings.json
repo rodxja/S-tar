@@ -5,6 +5,8 @@
         "string.h": "c",
         "stdlib.h": "c",
         "time.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "verbose.h": "c",
+        "tablefile.h": "c"
     }
 }
