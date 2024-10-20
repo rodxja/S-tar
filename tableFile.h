@@ -17,4 +17,7 @@ typedef struct
 TableFile *newTableFile();
 void writeTableFile(TableFile *tableFile, char *outputFile);
 
+TableFile *loadTableFile(char *inputFile);
+
+
 #endif // TABLEINFO_H

@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "tableFile.h" 
+
 File *newFile(char *name)
 {
     File *file = (File *)malloc(sizeof(File));
@@ -103,4 +105,32 @@ struct FileBlock *newFileBlock(char data[BLOCK_SIZE], ssize_t bytesRead)
     // fileBlock->index = 0;
 
     return fileBlock;
+}
+
+void extractFile(TableFile *tableFile, char *outputDirectory){
+    for (int i = 0; i < FILES_NUM; i++){
+        File *file = &tableFile->Files[i];
+        if (file->name == NULL || file->Head == NULL) {
+            continue;
+        }
+
+        char outputPath[256];
+        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
+
+        FILE *outputFile = fopen(outputPath, "w");
+        if (outputFile == NULL) {
+            printf("Error: No se pudo abrir el archivo %s\n", outputPath);
+            return;
+        }
+
+        FileBlock *currentBlock = file->Head;
+        while (currentBlock != NULL)
+        {
+            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
+            currentBlock = currentBlock->next;
+        }
+
+        fclose(outputFile);
+        printf("El archivo %s ha sido extraído con éxito!\n", file->name);
+    }
 }

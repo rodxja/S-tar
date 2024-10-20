@@ -5,7 +5,10 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "tableFile.h"
+
 #define BLOCK_SIZE 256 * 1024 // 256 KB
+
 
 typedef struct
 {
@@ -29,5 +32,6 @@ File *newFile(char *name);
 void openFile(File *file);
 // TODO : peding to implement
 void addBlock(File *file, struct FileBlock *block);
+void extractFile(TableFile *tableFile, char *outputDirectory);
 
 #endif // FILE_H

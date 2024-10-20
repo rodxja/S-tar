@@ -37,3 +37,22 @@ void writeTableFile(TableFile *tableFile, char *outputFile)
 
     fclose(file);
 }
+
+TableFile *loadTableFile(char *inputFile)
+{
+    FILE *file = fopen(inputFile, "r");
+    if (file == NULL) {
+        printf("Error: No se pudo abrir el archivo %s\n", inputFile);
+        return NULL;
+    }
+
+    TableFile *tableFile = (TableFile *)malloc(sizeof(TableFile));
+    if(fread(tableFile, sizeof(TableFile), 1, file) == 0) {
+        printf("Error reading from the given file\n", inputFile);
+        fclose(file);
+        return NULL;
+    }
+
+    fclose(file);
+    return tableFile;
+}

@@ -49,29 +49,38 @@ int main(int argc, char *argv[])
             writeTableFile(tableFile, argv[2]);
             break;
 
-        case 'f':
-            // TODO : validate that there are files to add
-            int areFiles = 0;
-            for (int j = 3; j < argc; j++)
-            {
-                // TODO : validate that the file exists
-                // TODO : validate that the file is not already in the table
-                // TODO : validate that the file is not already in the free blocks
-                // TODO : add the file to the table
-                File *file = newFile(argv[j]);
-                openFile(file);
-                // TODO : ADD file to tableFile
-
-                // TODO : read the file and add it to the table
-                areFiles = 1;
-            }
-            if (!areFiles)
-            {
-                printf("Error: no files to add\n");
+        case 'x':
+            tableFile = loadTableFile(argv[2]);
+            if (tableFile == NULL){
+                printf("Error: no se pudo cargar el archivo %s\n", argv[2]);
                 return 1;
             }
-
+            extractFile(tableFile, argv[3]);
             break;
+
+        // case 'f':
+        //     // TODO : validate that there are files to add
+        //     int areFiles = 0;
+        //     for (int j = 3; j < argc; j++)
+        //     {
+        //         // TODO : validate that the file exists
+        //         // TODO : validate that the file is not already in the table
+        //         // TODO : validate that the file is not already in the free blocks
+        //         // TODO : add the file to the table
+        //         File *file = newFile(argv[j]);
+        //         openFile(file);
+        //         // TODO : ADD file to tableFile
+
+        //         // TODO : read the file and add it to the table
+        //         areFiles = 1;
+        //     }
+        //     if (!areFiles)
+        //     {
+        //         printf("Error: no files to add\n");
+        //         return 1;
+        //     }
+        //     break;
+
 
         default:
             printf("Error: no valid option '%c' in '%s'\n", argv[1][i], argv[1]);
