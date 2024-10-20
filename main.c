@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
             tableFile = newTableFile();
 
             // if c is the only option, write the table file and exit
-            writeTableFile(tableFile, argv[2]);
+
             break;
 
         case 'f':
@@ -54,15 +54,19 @@ int main(int argc, char *argv[])
             int areFiles = 0;
             for (int j = 3; j < argc; j++)
             {
-                // TODO : validate that the file exists
-                // TODO : validate that the file is not already in the table
-                // TODO : validate that the file is not already in the free blocks
-                // TODO : add the file to the table
-                File *file = newFile(argv[j]);
-                openFile(file);
-                // TODO : ADD file to tableFile
+                char *fileName = argv[j];
+                // TODO : validate that the file exists in memory
 
-                // TODO : read the file and add it to the table
+                // TODO : validate that the file is not already in the table
+                if (fileExists(tableFile, fileName))
+                {
+                    printf("Error: file '%s' already exists\n", fileName);
+                    return 1;
+                }
+                // TODO : validate that the file is not already in the free blocks
+
+                // add the file to the table
+                addFile(tableFile, fileName);
                 areFiles = 1;
             }
             if (!areFiles)
@@ -78,6 +82,9 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    // TODO : this must be done if the option specifies it
+    writeTableFile(tableFile, argv[2]);
 
     return 0;
 }

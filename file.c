@@ -1,22 +1,37 @@
 #include <fcntl.h>
 
-#include "file.h"
 #include <stdio.h>
 #include <unistd.h>
+#include <string.h>
 
-File *newFile(char *name)
+#include "file.h"
+
+File *newFile()
 {
     File *file = (File *)malloc(sizeof(File));
+
+    file->name = NULL;
+    file->head = NULL;
+    file->tail = NULL;
+
+    return file;
+}
+
+void setNameFile(File *file, char *name)
+{
     if (file == NULL)
     {
-        return NULL;
+        printf("Error: File is null for setNameFile\n");
+        return;
+    }
+
+    if (name == NULL)
+    {
+        printf("Error: Name is null for setNameFile\n");
+        return;
     }
 
     file->name = name;
-    file->Head = NULL;
-    file->Tail = NULL;
-
-    return file;
 }
 
 void openFile(File *file)
@@ -76,31 +91,68 @@ void addBlock(File *file, struct FileBlock *block)
         return;
     }
 
-    if (file->Head == NULL)
+    if (file->head == NULL)
     {
-        file->Head = block;
-        file->Tail = block;
+        file->head = block;
+        file->tail = block;
     }
     else
     {
-        file->Tail->next = block;
-        file->Tail = block;
+        file->tail->next = block;
+        file->tail = block;
     }
 }
 
-struct FileBlock *newFileBlock(char data[BLOCK_SIZE], ssize_t bytesRead)
+struct FileBlock *newFileBlock()
 {
     FileBlock *fileBlock = (FileBlock *)malloc(sizeof(FileBlock));
+
+    fileBlock->size = 0;
+    fileBlock->next = NULL;
+
+    return fileBlock;
+}
+
+void setFileBlockData(struct FileBlock *fileBlock, char data[BLOCK_SIZE], ssize_t bytesRead)
+{
     if (fileBlock == NULL)
     {
+        printf("Error: FileBlock is null for setFileBlockData\n");
+        return;
+    }
+
+    if (data == NULL)
+    {
+        printf("Error: Data is null for setFileBlockData\n");
+        return;
+    }
+
+    if (bytesRead < 0)
+    {
+        printf("Error: bytesRead is negative for setFileBlockData\n");
+        return;
+    }
+
+    memcpy(fileBlock->data, data, bytesRead);
+    fileBlock->size = bytesRead;
+}
+
+struct FileBlock *getFreeBlock(File *file)
+{
+    if (file == NULL)
+    {
+        printf("Error: File is null for getFreeBlock\n");
         return NULL;
     }
 
-    // Copy data into fileBlock->data
-    memcpy(fileBlock->data, data, BLOCK_SIZE);
-    fileBlock->size = bytesRead;
-    fileBlock->next = NULL;
-    // fileBlock->index = 0;
+    if (file->head == NULL)
+    {
+        printf("Error: File has no blocks for getFreeBlock\n");
+        return NULL;
+    }
 
-    return fileBlock;
+    struct FileBlock *freeBlock = file->head;
+    file->head = file->head->next;
+
+    return freeBlock;
 }
