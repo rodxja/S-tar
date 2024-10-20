@@ -37,7 +37,7 @@ to run:
 
 e.g.:
 ```
-    gcc -o star main.c tableFile.c file.c
+    gcc -o star main.c tableFile.c file.c verbose.c
     ./star -c output.star
 ```
 
