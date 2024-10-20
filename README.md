@@ -20,7 +20,20 @@ to run:
 - `<file_n>`
 
 ## Options
-- c : ..
+- -c : creates a new .star file
+- -v : verbose option, with 1 v will include log for erros, with 2 v (vv) will log more info
+- -f : given the \<file_1\> ... \<file_n\> it will store then into the .star created
+- -x : it will extract all files from <output_file>
+
+## Cases
+
+1. ./star -c output.star
+2. ./star -cf output.star test.txt test2.txt
+3. ./star -x output.star
+
+*Note* : all cases can implement verbose option, v's must be at the beginning
+- ./star -vvcf output.star test.txt test2.txt
+- ./star -vx output.star
 
 e.g.:
 ```
@@ -30,4 +43,6 @@ e.g.:
 
 ## TODO
 
-- implement -v option
+- implement -x with <file_1> .. <file_n> in order to extract specfic files
+- validate that -c and -x are not run at the same command
+- validat that -f and -x are not run at the same command

@@ -166,6 +166,7 @@ TableFile *loadTableFile(char *inputFile)
 void extractFile(TableFile *tableFile, char *outputDirectory)
 {
     // extract all valid files
+    // TODO : this iteration will not be correct due that there will be deleted files, iterate with while or some other way
     for (int i = 0; i < tableFile->filesCount; i++)
     {
         File *file = tableFile->files[i];
