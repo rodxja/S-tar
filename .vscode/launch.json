@@ -32,7 +32,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-vcf",
+                "-vvcf",
                 "output.star",
                 "test.txt",
                 "file.h"
@@ -58,7 +58,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-vx",
+                "-vvx",
                 "output.star",
                 "test.txt",
                 "file.h"
@@ -76,6 +76,27 @@
                 }
             ],
             "preLaunchTask": "main",
+            "miDebuggerPath": "/usr/bin/gdb" // Path to gdb
+        },
+        {
+            "name": "test_fileBlock",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "test_fileBlock",
             "miDebuggerPath": "/usr/bin/gdb" // Path to gdb
         }
     ]

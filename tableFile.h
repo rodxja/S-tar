@@ -8,10 +8,13 @@
 
 typedef struct
 {
-    File *files[FILES_NUM];
     int filesCount;
+    File *files[FILES_NUM];
     File *freeBlocks;
 } TableFile;
+
+// TODO: when we delete a file in files, we will set that position to NULL
+// then we will extract its 
 
 // creates a new TableFile struct
 TableFile *newTableFile();
@@ -25,5 +28,8 @@ struct FileBlock *getFileBlockToUse(TableFile *tableFile);
 int fileExists(TableFile *tableFile, char *fileName);
 TableFile *loadTableFile(char *inputFile);
 void extractFile(TableFile *tableFile, char *outputDirectory);
+
+void serializeTableFile(TableFile *table, const char *filename);
+void deserializeTableFile(TableFile *table, const char *filename);
 
 #endif // TABLEINFO_H

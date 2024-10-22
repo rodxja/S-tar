@@ -15,7 +15,7 @@ TableFile *newTableFile()
     {
         tableFile->files[i] = NULL;
     }
-    tableFile->freeBlocks = NULL;
+    tableFile->freeBlocks = newFile();
     tableFile->filesCount = 0;
 
     return tableFile;
@@ -23,27 +23,7 @@ TableFile *newTableFile()
 
 void writeTableFile(TableFile *tableFile, char *outputFile)
 {
-    // no idea was b for
-    // FILE *file = fopen(outputFile, "wb");
-    FILE *file = fopen(outputFile, "w");
-    if (file == NULL)
-    {
-        logError("Error: No se pudo abrir el archivo %s\n", outputFile);
-        return;
-    }
-
-    int result = fwrite(tableFile, sizeof(TableFile), 1, file);
-    if (result == 0)
-    {
-        logError("Error writing to the given file\n");
-        exit(1);
-    }
-    else
-    {
-        logError("TableFile is written to the file successfully!\n");
-    }
-
-    fclose(file);
+    serializeTableFile(tableFile, outputFile);
 }
 
 void addFile(TableFile *tableFile, char *name)
@@ -147,7 +127,7 @@ TableFile *loadTableFile(char *inputFile)
     FILE *file = fopen(inputFile, "r");
     if (file == NULL)
     {
-        logError("Error: No se pudo abrir el archivo %s\n", inputFile);
+        logError("Error: File could not be open for loadTableFile %s\n", inputFile);
         return NULL;
     }
 
@@ -165,34 +145,53 @@ TableFile *loadTableFile(char *inputFile)
 
 void extractFile(TableFile *tableFile, char *outputDirectory)
 {
-    // extract all valid files
-    // TODO : this iteration will not be correct due that there will be deleted files, iterate with while or some other way
-    for (int i = 0; i < tableFile->filesCount; i++)
+    deserializeTableFile(tableFile, outputDirectory);
+}
+
+// Function to serialize the TableFile structure
+void serializeTableFile(TableFile *tableFile, const char *filename)
+{
+    FILE *file = fopen(filename, "wb");
+    if (!file)
     {
-        File *file = tableFile->files[i];
-        if (file == NULL || file->name == NULL || file->head == NULL)
-        {
-            continue;
-        }
-
-        char outputPath[256];
-        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
-
-        FILE *outputFile = fopen(outputPath, "w");
-        if (outputFile == NULL)
-        {
-            logError("Error: No se pudo abrir el archivo %s\n", outputPath);
-            return;
-        }
-
-        FileBlock *currentBlock = file->head;
-        while (currentBlock != NULL)
-        {
-            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
-            currentBlock = currentBlock->next;
-        }
-
-        fclose(outputFile);
-        logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
+        perror("Failed to open file for writing");
+        return;
     }
+
+    fwrite(&(tableFile->filesCount), sizeof(int), 1, file);
+
+    int i = 0;
+    File *f = tableFile->files[i];
+    while (f != NULL)
+    {
+        serializeFileList(f, file);
+        i++;
+        f = tableFile->files[i];
+    }
+
+    serializeFileList(tableFile->freeBlocks, file);
+
+    fclose(file);
+}
+
+// Function to deserialize the TableFile structure
+void deserializeTableFile(TableFile *tableFile, const char *filename)
+{
+    FILE *file = fopen(filename, "rb");
+    if (!file)
+    {
+        perror("Failed to open file for reading");
+        return;
+    }
+
+    fread(&(tableFile->filesCount), sizeof(int), 1, file);
+
+    for (int i = 0; i < tableFile->filesCount; ++i)
+    {
+        File *f = deserializeFileList(file);
+        tableFile->files[i] = f;
+    }
+
+    tableFile->freeBlocks = deserializeFileList(file);
+    fclose(file);
 }
