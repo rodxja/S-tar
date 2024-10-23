@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "fileBlock.h"
 
 // File is a struct that represents a file divided by blocks of 512kb, it is a linked list
 typedef struct File
@@ -20,10 +21,10 @@ typedef struct File
 File *newFile();
 void setNameFile(File *file, char *name);
 void addBlock(File *file, struct FileBlock *block);
+void serializeFile(struct File *myFile, FILE *file);
+File *deserializeFile(FILE *myFile);
 
-// used for list of freeBlocks
+// used for instance of freeBlocks
 struct FileBlock *getFreeBlock(File *file);
-void serializeFileList(struct File *myFile, FILE *file);
-File *deserializeFileList(FILE *myFile);
 
 #endif // FILE_H

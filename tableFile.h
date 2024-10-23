@@ -13,9 +13,6 @@ typedef struct
     File *freeBlocks;
 } TableFile;
 
-// TODO: when we delete a file in files, we will set that position to NULL
-// then we will extract its 
-
 // creates a new TableFile struct
 TableFile *newTableFile();
 // adds a file to the TableFile, if the TableFile is full, it will print an error message
@@ -30,6 +27,6 @@ TableFile *loadTableFile(char *inputFile);
 void extractFile(TableFile *tableFile, char *outputDirectory);
 
 void serializeTableFile(TableFile *table, const char *filename);
-void deserializeTableFile(TableFile *table, const char *filename);
+TableFile *deserializeTableFile(const char *filename);
 
 #endif // TABLEINFO_H

@@ -15,6 +15,7 @@ File *newFile()
     file->name = NULL;
     file->head = NULL;
     file->tail = NULL;
+    file->isDeleted = 0;
 
     return file;
 }
@@ -33,50 +34,13 @@ void setNameFile(File *file, char *name)
         return;
     }
 
-    file->name = name;
-}
-
-void openFile(File *file)
-{
-    if (file == NULL)
+    if (file->name != NULL)
     {
-        logError("Error: File is null for openFile\n");
-        return;
+        free(file->name);
     }
 
-    if (file->name == NULL)
-    {
-        logError("Error: File name is null for openFile\n");
-        return;
-    }
-
-    int sourceFD = open(file->name, O_RDONLY);
-    if (sourceFD == -1)
-    {
-        logError("Error: opening source file '%s'.\n", file->name);
-        return;
-    }
-
-    // ??? WOULD IT BE CORRECT TO USE A BUFFER OF 256KB?
-    char buffer[BLOCK_SIZE];
-
-    while (1)
-    {
-        ssize_t bytesRead = read(sourceFD, buffer, sizeof(buffer));
-        if (bytesRead == 0)
-        { // End of file
-            break;
-        }
-        if (bytesRead == -1)
-        {
-            logError("Error: reading source file '%s'.\n", file->name);
-            close(sourceFD);
-            break;
-        }
-
-        struct FileBlock *fileBlock = newFileBlock(buffer, bytesRead);
-        addBlock(file, fileBlock);
-    }
+    file->name = (char *)malloc(strlen(name) + 1);
+    strcpy(file->name, name);
 }
 
 void addBlock(File *file, struct FileBlock *block)
@@ -105,28 +69,51 @@ void addBlock(File *file, struct FileBlock *block)
     }
 }
 
-void serializeFileList(struct File *myFile, FILE *file)
+void serializeFile(struct File *myFile, FILE *file)
 {
     size_t nameLen = strlen(myFile->name) + 1; // Include the null terminator
     // write size of name
     fwrite(&nameLen, sizeof(size_t), 1, file);
     // write name
     fwrite(myFile->name, sizeof(char), nameLen, file);
-    serializeFileBlockList(myFile->head, file);
+    // write blocks
+    struct FileBlock *currentBlock = myFile->head;
+    while (currentBlock)
+    {
+        serializeFileBlock(currentBlock, file);
+        currentBlock = currentBlock->next;
+    }
+    // write null to indicate end of blocks
+    FileBlock *nullBlock = newFileBlock();
+    fwrite(nullBlock, sizeof(struct FileBlock *), 1, file);
+    // write isDeleted
+    fwrite(&(myFile->isDeleted), sizeof(int), 1, file);
 }
 
-File *deserializeFileList(FILE *file)
+File *deserializeFile(FILE *file)
 {
-    File *f = (File *)malloc(sizeof(File));
+    File *f = newFile();
+    // read size of name
     size_t nameLen;
     fread(&nameLen, sizeof(size_t), 1, file);
+    // read name
     f->name = (char *)malloc(nameLen);
     fread(f->name, sizeof(char), nameLen, file);
-    f->head = deserializeFileBlockList(file);
-    while (f->head->next)
+    // read blocks
+    while (1)
     {
-        f->head = f->head->next;
+        struct FileBlock *nextBlock = deserializeFileBlock(file);
+        // this is due to nullBlock that was serialized
+        if (nextBlock->size == 0)
+        {
+            break;
+        }
+        addBlock(f, nextBlock);
     }
+
+    // read isDeleted
+    fread(&(f->isDeleted), sizeof(int), 1, file);
+
     return f;
 }
 

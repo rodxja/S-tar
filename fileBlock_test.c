@@ -46,6 +46,11 @@ void test_serializeFileBlock()
     }
     setFileBlockData(fileBlock, data, BLOCK_SIZE);
 
+    // create a second fileBlock
+    FileBlock *fileBlock2 = newFileBlock();
+
+    fileBlock->next = fileBlock2;
+
     char *filename = "test_serializeFileBlock";
     FILE *file = fopen(filename, "w");
     serializeFileBlock(fileBlock, file);

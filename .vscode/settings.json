@@ -9,6 +9,7 @@
         "verbose.h": "c",
         "tablefile.h": "c",
         "FILEbLOCK.C": "cpp",
-        "file.h": "c"
+        "file.h": "c",
+        "fileblock.h": "c"
     }
 }
