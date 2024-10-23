@@ -16,6 +16,8 @@ TableFile *newTableFile()
         tableFile->files[i] = NULL;
     }
     tableFile->freeBlocks = newFile();
+    setNameFile(tableFile->freeBlocks, "freeBlocks");
+
     tableFile->filesCount = 0;
 
     return tableFile;
@@ -145,7 +147,7 @@ TableFile *loadTableFile(char *inputFile)
 
 void extractFile(TableFile *tableFile, char *outputDirectory)
 {
-    deserializeTableFile(tableFile, outputDirectory);
+    // deserializeTableFile(tableFile, outputDirectory);
 }
 
 // Function to serialize the TableFile structure
@@ -154,44 +156,53 @@ void serializeTableFile(TableFile *tableFile, const char *filename)
     FILE *file = fopen(filename, "wb");
     if (!file)
     {
-        perror("Failed to open file for writing");
+        logError("Failed to open file for writing");
         return;
     }
 
     fwrite(&(tableFile->filesCount), sizeof(int), 1, file);
 
     int i = 0;
-    File *f = tableFile->files[i];
-    while (f != NULL)
+    for (i = 0; i < tableFile->filesCount; i++)
     {
-        serializeFileList(f, file);
-        i++;
-        f = tableFile->files[i];
+        File *f = tableFile->files[i];
+        if (f == NULL)
+        {
+            continue;
+        }
+        serializeFile(f, file);
     }
 
-    serializeFileList(tableFile->freeBlocks, file);
+    if (tableFile->freeBlocks == NULL)
+    {
+        tableFile->freeBlocks = newFile();
+    }
+    serializeFile(tableFile->freeBlocks, file);
 
     fclose(file);
 }
 
 // Function to deserialize the TableFile structure
-void deserializeTableFile(TableFile *tableFile, const char *filename)
+TableFile *deserializeTableFile(const char *filename)
 {
+    TableFile *tableFile = newTableFile();
     FILE *file = fopen(filename, "rb");
     if (!file)
     {
-        perror("Failed to open file for reading");
-        return;
+        logError("Failed to open file for reading");
+        return NULL;
     }
 
     fread(&(tableFile->filesCount), sizeof(int), 1, file);
 
     for (int i = 0; i < tableFile->filesCount; ++i)
     {
-        File *f = deserializeFileList(file);
+        File *f = deserializeFile(file);
         tableFile->files[i] = f;
     }
 
-    tableFile->freeBlocks = deserializeFileList(file);
+    tableFile->freeBlocks = deserializeFile(file);
     fclose(file);
+
+    return tableFile;
 }

@@ -119,6 +119,27 @@
             ],
             "preLaunchTask": "test_file",
             "miDebuggerPath": "/usr/bin/gdb" // Path to gdb
+        },
+        {
+            "name": "test_tableFile",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "test_tableFile",
+            "miDebuggerPath": "/usr/bin/gdb" // Path to gdb
         }
     ]
 }
