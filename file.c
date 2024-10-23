@@ -6,6 +6,7 @@
 
 #include "file.h"
 #include "verbose.h"
+#include "fileBlock.h"
 
 File *newFile()
 {
@@ -104,38 +105,29 @@ void addBlock(File *file, struct FileBlock *block)
     }
 }
 
-struct FileBlock *newFileBlock()
+void serializeFileList(struct File *myFile, FILE *file)
 {
-    FileBlock *fileBlock = (FileBlock *)malloc(sizeof(FileBlock));
-
-    fileBlock->size = 0;
-    fileBlock->next = NULL;
-
-    return fileBlock;
+    size_t nameLen = strlen(myFile->name) + 1; // Include the null terminator
+    // write size of name
+    fwrite(&nameLen, sizeof(size_t), 1, file);
+    // write name
+    fwrite(myFile->name, sizeof(char), nameLen, file);
+    serializeFileBlockList(myFile->head, file);
 }
 
-void setFileBlockData(struct FileBlock *fileBlock, char data[BLOCK_SIZE], ssize_t bytesRead)
+File *deserializeFileList(FILE *file)
 {
-    if (fileBlock == NULL)
+    File *f = (File *)malloc(sizeof(File));
+    size_t nameLen;
+    fread(&nameLen, sizeof(size_t), 1, file);
+    f->name = (char *)malloc(nameLen);
+    fread(f->name, sizeof(char), nameLen, file);
+    f->head = deserializeFileBlockList(file);
+    while (f->head->next)
     {
-        logError("Error: FileBlock is null for setFileBlockData\n");
-        return;
+        f->head = f->head->next;
     }
-
-    if (data == NULL)
-    {
-        logError("Error: Data is null for setFileBlockData\n");
-        return;
-    }
-
-    if (bytesRead < 0)
-    {
-        logError("Error: bytesRead is negative for setFileBlockData\n");
-        return;
-    }
-
-    memcpy(fileBlock->data, data, bytesRead);
-    fileBlock->size = bytesRead;
+    return f;
 }
 
 struct FileBlock *getFreeBlock(File *file)

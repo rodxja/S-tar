@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
                 logError("Error: no files to add\n");
                 return 1;
             }
-            extractFile(tableFile, "output");
             break;
 
         case 'v': // verbose

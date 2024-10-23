@@ -20,27 +20,24 @@
             ]
         },
         {
-            "type": "cppbuild",
-            "label": "C/C++: gcc compilar archivo activo",
-            "command": "/usr/bin/gcc",
+            "label": "test_fileBlock",
+            "type": "shell",
+            "command": "gcc",
             "args": [
-                "-fdiagnostics-color=always",
-                "-g",
-                "${file}",
+                "-g", // Include debugging information
+                "fileBlock_test.c", // Replace with your source file
+                "fileBlock.c",
+                "verbose.c",
                 "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
-            ],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": [
-                "$gcc"
+                "a.out" // Output file name
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "detail": "Tarea generada por el depurador."
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }
