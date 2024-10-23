@@ -6,7 +6,6 @@
 
 #include "fileBlock.h"
 #include "verbose.h"
-#include <cstddef>
 
 struct FileBlock *newFileBlock()
 {
@@ -44,8 +43,13 @@ void setFileBlockData(struct FileBlock *fileBlock, char data[BLOCK_SIZE], ssize_
 
 void serializeFileBlock(FileBlock *fileBlock, FILE *file)
 {
+    // write size
     fwrite(&(fileBlock->size), sizeof(size_t), 1, file);
+    // write data
     fwrite(fileBlock->data, sizeof(char), fileBlock->size, file);
+    // !!! cannot serialize the next block, it is a pointer, because the pointer will be different in memory
+    // write next, it does not matter if it is null
+    // fwrite(&(fileBlock->next), sizeof(struct FileBlock *), 1, file);
 }
 
 struct FileBlock *deserializeFileBlock(FILE *file)
@@ -65,6 +69,9 @@ struct FileBlock *deserializeFileBlock(FILE *file)
         logError("Error: Could not read data from file\n");
         return NULL;
     }
+
+    // !!! cannot deserialize the next block, it is a pointer, because the pointer will be different in memory
+    // bytesRead = fread(&(fileBlock->next), sizeof(struct FileBlock *), 1, file);
 
     return fileBlock;
 }
