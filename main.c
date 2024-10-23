@@ -102,3 +102,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+// gcc -o star main.c tableFile.c file.c fileBlock.c verbose.c
+// ./star -vvvcf test.star garabatos.txt otro.txt

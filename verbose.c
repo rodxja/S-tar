@@ -6,8 +6,8 @@
 int logLevel = 0;
 // 0 = just for logAll
 // 1 = logAll and logError
-// 2 = logAll, logError and logInfo
-// 3 = logAll, logError, logInfo and logDebug
+// 2 = logInfo, logError and logInfo
+// 3 = logDebug, logError, logInfo and logDebug
 
 void logAll(const char *format, ...)
 {
@@ -21,7 +21,7 @@ void logAll(const char *format, ...)
 
 void logError(const char *format, ...)
 {
-    if (logLevel == 0)
+    if (logLevel >= 1)
     {
         return;
     }
@@ -36,7 +36,7 @@ void logError(const char *format, ...)
 
 void logInfo(const char *format, ...)
 {
-    if (logLevel == 2)
+    if (logLevel >= 2)
     {
         va_list args;           // Declare a variable argument list
         va_start(args, format); // Initialize the list with the last fixed parameter
@@ -49,7 +49,7 @@ void logInfo(const char *format, ...)
 
 void logDebug(const char *format, ...)
 {
-    if (logLevel == 3)
+    if (logLevel >= 3)
     {
         va_list args;           // Declare a variable argument list
         va_start(args, format); // Initialize the list with the last fixed parameter

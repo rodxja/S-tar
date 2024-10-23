@@ -58,10 +58,8 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-vvx",
-                "output.star",
-                "test.txt",
-                "file.h"
+                "-vvvx",
+                "test.star"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
