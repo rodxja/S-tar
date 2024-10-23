@@ -1,10 +1,12 @@
-#include <stdlib.h> // Include this header for malloc
-#include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h> // Include this header for malloc and NULL
 #include <string.h>
+#include <stddef.h> // Include this header for size_t
+#include <stdio.h>  // Include this header for FILE
+#include <unistd.h> // Include this header for ssize_t
 
 #include "fileBlock.h"
 #include "verbose.h"
+#include <cstddef>
 
 struct FileBlock *newFileBlock()
 {
@@ -40,53 +42,29 @@ void setFileBlockData(struct FileBlock *fileBlock, char data[BLOCK_SIZE], ssize_
     fileBlock->size = bytesRead;
 }
 
-char *toJsonFileBlock(struct FileBlock *fileBlock)
+void serializeFileBlock(FileBlock *fileBlock, FILE *file)
 {
-    char *json = (char *)malloc(sizeof(char) * (fileBlock->size + 100));
-    sprintf(json, "{\"size\": %ld, \"data\": \"", fileBlock->size);
-    for (int i = 0; i < fileBlock->size; i++)
-    {
-        sprintf(json + i, "%c", fileBlock->data[i]);
-    }
-    sprintf(json + fileBlock->size, "\"}");
-    return json;
+    fwrite(&(fileBlock->size), sizeof(size_t), 1, file);
+    fwrite(fileBlock->data, sizeof(char), fileBlock->size, file);
 }
 
-// Function to serialize a FileBlock linked list
-void serializeFileBlockList(FileBlock *head, FILE *file)
+struct FileBlock *deserializeFileBlock(FILE *file)
 {
-    while (head)
-    {
-        // Write the size of the data
-        fwrite(&(head->size), sizeof(size_t), 1, file);
-        // Write the data
-        fwrite(head->data, sizeof(char), head->size, file);
-        head = head->next;
-    }
-    size_t endMarker = 0; // Use 0 size to indicate the end of the list
-    fwrite(&endMarker, sizeof(size_t), 1, file);
-}
+    FileBlock *fileBlock = newFileBlock();
 
-// Function to deserialize a FileBlock linked list
-struct FileBlock *deserializeFileBlockList(FILE *file)
-{
-    FileBlock *head = NULL, *tail = NULL;
-    size_t size;
-    while (fread(&size, sizeof(size_t), 1, file) && size > 0)
+    size_t bytesRead = fread(&(fileBlock->size), sizeof(size_t), 1, file);
+    if (bytesRead != 1)
     {
-        FileBlock *newBlock = (FileBlock *)malloc(sizeof(FileBlock));
-        newBlock->size = size;
-        fread(newBlock->data, sizeof(char), size, file);
-        newBlock->next = NULL;
-        if (!head)
-        {
-            head = newBlock;
-        }
-        else
-        {
-            tail->next = newBlock;
-        }
-        tail = newBlock;
+        logError("Error: Could not read size from file\n");
+        return NULL;
     }
-    return head;
+
+    bytesRead = fread(fileBlock->data, sizeof(char), fileBlock->size, file);
+    if (bytesRead != fileBlock->size)
+    {
+        logError("Error: Could not read data from file\n");
+        return NULL;
+    }
+
+    return fileBlock;
 }

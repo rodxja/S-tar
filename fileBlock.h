@@ -16,8 +16,7 @@ typedef struct FileBlock
 
 struct FileBlock *newFileBlock();
 void setFileBlockData(struct FileBlock *fileBlock, char data[BLOCK_SIZE], ssize_t bytesRead);
-char *toJsonFileBlock(struct FileBlock *fileBlock);
-void serializeFileBlockList(struct FileBlock *head, FILE *file);
-FileBlock *deserializeFileBlockList(FILE *file);
+void serializeFileBlock(struct FileBlock *fileBlock, FILE *file);
+FileBlock *deserializeFileBlock(FILE *file);
 
 #endif // FILEBLOCK_H
