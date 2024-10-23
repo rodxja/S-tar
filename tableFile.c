@@ -219,3 +219,29 @@ TableFile *deserializeTableFile(const char *filename)
 
     return tableFile;
 }
+
+void listFiles(TableFile *tableFile) {
+    if (tableFile == NULL) {
+        logError("Error: TableFile is null for listFiles\n");
+        return;
+    }
+
+    printf("Files in the table:\n");
+
+    for (int i = 0; i < tableFile->filesCount; i++) {
+        File *file = tableFile->files[i];
+        if (file != NULL && file->name != NULL && !file->isDeleted) {
+            size_t totalSize = 0;
+            FileBlock *currentBlock = file->head;
+            while(currentBlock != NULL) {
+                totalSize += currentBlock->size;
+                currentBlock = currentBlock->next;
+            }
+            printf("Archivo %d: %s, Tamaño: %zu bytes\n", i + 1, file->name, totalSize);
+        }
+    }
+
+    if (tableFile->filesCount == 0) {
+        printf("No hay archivos en la tabla\n");
+    }
+}

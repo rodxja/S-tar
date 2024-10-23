@@ -29,4 +29,6 @@ void extractFile(TableFile *tableFile, char *outputDirectory);
 void serializeTableFile(TableFile *table, const char *filename);
 TableFile *deserializeTableFile(const char *filename);
 
+void listFiles(TableFile *tableFile);
+
 #endif // TABLEINFO_H

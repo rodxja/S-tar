@@ -90,6 +90,16 @@ int main(int argc, char *argv[])
             }
             extractFile(tableFile, ".");
             break;
+        
+        case 't':
+            tableFile = loadTableFile(argv[2]);
+            if (tableFile == NULL)
+            {
+                logError("Error: no se pudo cargar el archivo %s\n", argv[2]);
+                return 1;
+            }
+            listFiles(tableFile);
+            break;
 
         default:
             logError("Error: no valid option '%c' in '%s'\n", argv[1][i], argv[1]);
