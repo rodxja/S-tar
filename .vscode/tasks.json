@@ -82,6 +82,26 @@
             "problemMatcher": [
                 "$gcc"
             ]
+        },
+        {
+            "label": "test_fileHeader",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g", // Include debugging information
+                "fileHeader_test.c", // Replace with your source file
+                "fileHeader.c",
+                "verbose.c",
+                "-o",
+                "a.out" // Output file name
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
         }
     ]
 }
