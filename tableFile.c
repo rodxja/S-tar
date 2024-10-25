@@ -49,8 +49,9 @@ void addFile(TableFile *tableFile, char *name)
         return;
     }
 
-    int sourceFD = open(name, O_RDONLY);
-    if (sourceFD == -1)
+    //Cambio de open a fopen
+    int sourceFD = fopen(name, "rb");
+    if (sourceFD == NULL)
     {
         logError("Error: opening source file '%s'.\n", name);
         return;
@@ -61,25 +62,33 @@ void addFile(TableFile *tableFile, char *name)
 
     File *file = getFileToUse(tableFile);
     setNameFile(file, name);
+    size_t offset = 0;
     while (1)
     {
-        ssize_t bytesRead = read(sourceFD, buffer, sizeof(buffer));
-        if (bytesRead == 0)
-        { // End of file
-            break;
-        }
-        if (bytesRead == -1)
-        {
-            logError("Error: reading source file '%s'.\n", name);
-            close(sourceFD);
-            break;
+        // Mover el puntero de lectura al inicio del bloque
+        if (fseek(sourceFD, offset, SEEK_SET) != 0) { 
+            logError("Error: seeking in source file '%s'.\n", name);
+            fclose(sourceFD);
+            return;
         }
 
-        struct FileBlock *fileBlock = getFileBlockToUse(tableFile);
+        // Leer el bloque de datos
+        size_t bytesRead = fread(buffer, 1, BLOCK_SIZE, sourceFD);  
+        if (bytesRead == 0) {  // Fin del archivo
+            break;
+        }
+        if (ferror(sourceFD)) {
+            logError("Error: reading source file '%s'.\n", name);
+            fclose(sourceFD);
+            return;
+        }
+
+        FileBlock *fileBlock = getFileBlockToUse(tableFile);
         setFileBlockData(fileBlock, buffer, bytesRead);
         addBlock(file, fileBlock);
-    }
 
+        offset += bytesRead;
+    }
     // TODO : return error code
     tableFile->filesCount++;
     close(sourceFD);
