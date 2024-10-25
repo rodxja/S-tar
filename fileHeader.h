@@ -18,5 +18,6 @@ void setNameFileHeader(FileHeader *fileHeader, char *name);
 void serializeFileHeader(FileHeader *fileHeader, FILE *file);
 FileHeader *deserializeFileHeader(FILE *file);
 char *toStringFileHeader(FileHeader *fileHeader);
+int isFileHeaderAvailable(FileHeader *fileHeader);
 
 #endif // FILEHEADER_H

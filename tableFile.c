@@ -23,13 +23,14 @@ TableFile *newTableFile()
     setNameFileHeader(tableFile->freeBlocksHeader, "freeBlocksHeader");
 
     tableFile->filesCount = 0;
+    tableFile->blockCount = 0;
 
     return tableFile;
 }
 
 // adds a new file into file headers and stored in disk directly
 // TODO : adjust to new logic
-void addFile(TableFile *tableFile, char *name)
+void addFile(TableFile *tableFile, const char *fileName)
 {
     if (tableFile == NULL)
     {
@@ -43,24 +44,31 @@ void addFile(TableFile *tableFile, char *name)
         return;
     }
 
-    if (name == NULL)
+    if (fileName == NULL)
     {
         logError("Error: File name is null for addFile\n");
         return;
     }
 
-    int sourceFD = open(name, O_RDONLY);
+    int sourceFD = open(fileName, O_RDONLY);
     if (sourceFD == -1)
     {
-        logError("Error: opening source file '%s'.\n", name);
+        logError("Error: opening source file '%s'.\n", fileName);
         return;
     }
+
+    FileHeader *fileHeader = getFileToUse(tableFile);
+    if (fileHeader == NULL)
+    {
+        logError("Error: no file header available\n");
+        close(sourceFD);
+        return;
+    }
+    setNameFileHeader(fileHeader, fileName);
 
     // ??? WOULD IT BE CORRECT TO USE A BUFFER OF 256KB?
     char buffer[BLOCK_SIZE];
 
-    File *file = getFileToUse(tableFile);
-    setNameFile(file, name);
     while (1)
     {
         ssize_t bytesRead = read(sourceFD, buffer, sizeof(buffer));
@@ -70,10 +78,24 @@ void addFile(TableFile *tableFile, char *name)
         }
         if (bytesRead == -1)
         {
-            logError("Error: reading source file '%s'.\n", name);
+            logError("Error: reading source file '%s'.\n", fileName);
             close(sourceFD);
             break;
         }
+
+        // ??? what would happen if a block is exactly 256KB?
+
+        // take first block and set into the fileHeader
+        int firstBlock = tableFile->freeBlocksHeader->first;
+        if (firstBlock == -1)
+        {
+            firstBlock = tableFile->blockCount;
+            tableFile->blockCount++;
+        }
+
+        with 
+
+        // current block must point to the next block
 
         struct FileBlock *fileBlock = getFileBlockToUse(tableFile);
         setFileBlockData(fileBlock, buffer, bytesRead);
@@ -85,45 +107,77 @@ void addFile(TableFile *tableFile, char *name)
     close(sourceFD);
 }
 
-// this retrieves the file to use, searches it there is one deleted, otherwise creates a new one
-// !!! i think i will deprecate this function
-File *getFileToUse(TableFile *tableFile)
+// this retrieves the file header to use, searches it there is one deleted, otherwise creates a new one
+FileHeader *getFileHeaderToUse(TableFile *tableFile)
 {
-    // TODO : implement a way to detect deleted files
-    return newFile(NULL);
-}
+    int filesToSearch = tableFile->filesCount;
 
-// this retrieves the file block to use
-// it is taken from the free blocks list if there is any
-// otherwise a new block is created
-// TODO : adjust to new logic
-struct FileBlock *getFileBlockToUse(TableFile *tableFile)
-{
-    /* struct FileBlock *fileBlock = getFreeBlock(tableFile->freeBlocks);
-    if (fileBlock != NULL)
+    if (filesToSearch == 0)
     {
-        return fileBlock;
-    } */
-    return newFileBlock();
-}
+        return 0;
+    }
 
-int fileExists(TableFile *tableFile, char *fileName)
-{
-    /* for (int i = 0; i < tableFile->filesCount; i++) // this will not be correct due that there will be deleted files, iterate with while or some other way
+    for (int i = 0; i < FILES_NUM; i++)
     {
-        if (tableFile->files[i] == NULL)
+        if (filesToSearch == 0)
+        {
+            break;
+        }
+
+        if (tableFile->fileHeader[i] == NULL)
         {
             continue;
         }
-        if (tableFile->files[i]->name == NULL)
+
+        if (isFileHeaderAvailable(tableFile->fileHeader[i]))
+        {
+            return tableFile->fileHeader[i];
+        }
+
+        filesToSearch--;
+    }
+    return NULL;
+}
+
+int fileExists(TableFile *tableFile, const char *fileName)
+{
+    if (tableFile == NULL)
+    {
+        logError("Error: TableFile is null for fileExists\n");
+        return 0;
+    }
+
+    int filesToSearch = tableFile->filesCount;
+
+    if (filesToSearch == 0)
+    {
+        return 0;
+    }
+
+    for (int i = 0; i < FILES_NUM; i++) // this will not be correct due that there will be deleted files, iterate with while or some other way
+    {
+        if (filesToSearch == 0)
+        {
+            break;
+        }
+
+        if (tableFile->fileHeader[i] == NULL)
         {
             continue;
         }
-        if (strcmp(tableFile->files[i]->name, fileName) == 0)
+
+        if (tableFile->fileHeader[i]->isDeleted)
+        {
+            continue;
+        }
+
+        if (strcmp(tableFile->fileHeader[i]->name, fileName) == 0)
         {
             return 1;
         }
-    } */
+
+        filesToSearch--;
+    }
     return 0;
 }
 
@@ -134,19 +188,52 @@ TableFile *loadTableFile(char *inputFile)
     return tableFile;
 }
 
-void extractFile(TableFile *tableFile, char *outputDirectory)
+// TODO : add the file name of the .star file
+void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
 {
-    // extract all valid files
-    /* for (int i = 0; i < tableFile->filesCount; i++)
+    if (tableFile == NULL)
     {
-        File *file = tableFile->files[i];
-        if (file == NULL || file->name == NULL || file->head == NULL || file->isDeleted)
+        logError("Error: TableFile is null for extractAllFiles\n");
+        return;
+    }
+
+    if (outputDirectory == NULL)
+    {
+        logError("Error: outputDirectory is null for extractAllFiles\n");
+        return;
+    }
+
+    if (tableFile->filesCount == 0)
+    {
+        logInfo("Info: No files to extract\n");
+        return;
+    }
+
+    // number of files to extract
+    int filesToExtract = tableFile->filesCount;
+    // extract all valid files
+    for (int i = 0; i < tableFile->filesCount; i++)
+    {
+        if (filesToExtract == 0)
+        {
+            break;
+        }
+
+        FileHeader *fileHeader = tableFile->fileHeader[i];
+        if (fileHeader == NULL)
+        {
+            logError("Error: fileHeader is null in extractAllFiles\n");
+        }
+
+        // check if the file is deleted or has no blocks
+        if (fileHeader->isDeleted || fileHeader->first == -1)
         {
             continue;
         }
 
         char outputPath[256];
-        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
+        sprintf(outputPath, "%s/%s", outputDirectory, fileHeader->name);
+        logInfo("Extracting file %s to %s\n", fileHeader->name, outputPath);
 
         FILE *outputFile = fopen(outputPath, "w");
         if (outputFile == NULL)
@@ -154,6 +241,10 @@ void extractFile(TableFile *tableFile, char *outputDirectory)
             logError("Error: No se pudo abrir el archivo %s\n", outputPath);
             return;
         }
+
+        // by the first block start to read from memory
+
+        // TODO : use seek to move to the first block
 
         FileBlock *currentBlock = file->head;
         while (currentBlock != NULL)
@@ -163,8 +254,9 @@ void extractFile(TableFile *tableFile, char *outputDirectory)
         }
 
         fclose(outputFile);
+        filesToExtract--;
         logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
-    } */
+    }
 }
 
 // Function to serialize the TableFile structure
@@ -185,6 +277,10 @@ void serializeTableFile(TableFile *tableFile, const char *outputFile)
 
     // serialize free blocks header
     serializeFileHeader(tableFile->freeBlocksHeader, file);
+
+    fwrite(&tableFile->filesCount, sizeof(tableFile->filesCount), 1, file);
+    fwrite(&tableFile->blockCount, sizeof(tableFile->blockCount), 1, file);
+    fclose(file);
 }
 
 // Function to deserialize the TableFile structure
@@ -198,7 +294,7 @@ TableFile *deserializeTableFile(const char *filename)
         return NULL;
     }
 
-    // validate 
+    // validate
 
     // deserialize file headers
     for (int i = 0; i < FILES_NUM; i++)
@@ -208,6 +304,11 @@ TableFile *deserializeTableFile(const char *filename)
 
     // deserialize free blocks header
     tableFile->freeBlocksHeader = deserializeFileHeader(file);
+
+    fread(&tableFile->filesCount, sizeof(tableFile->filesCount), 1, file);
+    fread(&tableFile->blockCount, sizeof(tableFile->blockCount), 1, file);
+
+    fclose(file);
 
     return tableFile;
 }

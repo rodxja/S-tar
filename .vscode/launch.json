@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-c",
+                "-vvvc",
                 "output.star",
                 "test.txt"
             ],
@@ -59,7 +59,7 @@
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
                 "-vvvx",
-                "test.star"
+                "output.star"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

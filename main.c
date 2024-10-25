@@ -84,7 +84,6 @@ int main(int argc, char *argv[])
 
         case 'x':
             // validate that file exists
-            
 
             tableFile = loadTableFile(argv[2]);
             if (tableFile == NULL)
@@ -92,7 +91,8 @@ int main(int argc, char *argv[])
                 logError("Error: no se pudo cargar el archivo %s\n", argv[2]);
                 return 1;
             }
-            extractFile(tableFile, ".");
+            // TODO : pending to implement
+            extractAllFiles(tableFile, ".");
             break;
 
         default:

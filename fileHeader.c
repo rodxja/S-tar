@@ -38,3 +38,8 @@ char *toStringFileHeader(FileHeader *fileHeader)
     sprintf(str, "FileHeader: name: %s, first: %d\n", fileHeader->name, fileHeader->first);
     return str;
 }
+
+int isFileHeaderAvailable(FileHeader *fileHeader)
+{
+    return fileHeader->first == -1 || fileHeader->isDeleted;
+}

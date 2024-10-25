@@ -12,6 +12,7 @@
                 "file.c",
                 "fileBlock.c",
                 "verbose.c",
+                "fileHeader.c",
                 "-o",
                 "a.out"
             ],
