@@ -10,11 +10,13 @@ typedef struct
 {
     char name[FILE_NAME_SIZE];
     int first;
+    int isDeleted;
 } FileHeader;
 
 FileHeader *newFileHeader();
 void setNameFileHeader(FileHeader *fileHeader, char *name);
 void serializeFileHeader(FileHeader *fileHeader, FILE *file);
 FileHeader *deserializeFileHeader(FILE *file);
+char *toStringFileHeader(FileHeader *fileHeader);
 
 #endif // FILEHEADER_H

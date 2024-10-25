@@ -10,7 +10,7 @@ void test_newFileHeader()
 {
     FileHeader *fileHeader = newFileHeader();
     assert(fileHeader != NULL);
-    assert(fileHeader->first == 0);
+    assert(fileHeader->first == -1);
     free(fileHeader);
 }
 
@@ -29,6 +29,7 @@ void test_serializeFileHeader()
     char *name = "garabatos.pdf";
     setNameFileHeader(fileHeader, name);
     fileHeader->first = 70;
+    fileHeader->isDeleted = 1;
     char *filename = "test_serializeFileHeader";
     FILE *file = fopen(filename, "w");
     serializeFileHeader(fileHeader, file);

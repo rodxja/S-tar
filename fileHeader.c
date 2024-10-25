@@ -7,7 +7,8 @@
 FileHeader *newFileHeader()
 {
     FileHeader *fileHeader = (FileHeader *)malloc(sizeof(FileHeader));
-    fileHeader->first = 0;
+    fileHeader->first = -1; // -1 means that the file has no blocks
+    fileHeader->isDeleted = 0;
     return fileHeader;
 }
 
@@ -26,5 +27,14 @@ FileHeader *deserializeFileHeader(FILE *file)
 {
     FileHeader *fileHeader = newFileHeader();
     fread(fileHeader, sizeof(FileHeader), 1, file);
+    logInfo(toStringFileHeader(fileHeader));
     return fileHeader;
+}
+
+char *toStringFileHeader(FileHeader *fileHeader)
+{
+    // name + size of int as string + extra chars in str
+    char *str = (char *)malloc(sizeof(char) * FILE_NAME_SIZE + 10);
+    sprintf(str, "FileHeader: name: %s, first: %d\n", fileHeader->name, fileHeader->first);
+    return str;
 }
