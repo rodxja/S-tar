@@ -29,7 +29,7 @@ TableFile *newTableFile()
 
 // adds a new file into file headers and stored in disk directly
 // TODO : adjust to new logic
-void addFile(TableFile *tableFile, char *name)
+void addFile(TableFile *tableFile, char *name, char *tarFileName)
 {
     if (tableFile == NULL)
     {
@@ -57,21 +57,37 @@ void addFile(TableFile *tableFile, char *name)
         return;
     }
 
+    if (name == NULL | tarFileName != NULL)
+    {
+        logError("Error: File name is null for addFile\n");
+        return;
+    }
+    
+    FILE  *tarFileName = fopen(tarFileName, "ab");
+    if (tarFileName == NULL)
+    {
+        logError("Error: opening tar file '%s'.\n", tarFileName);
+        fclose(sourceFD);
+        return;
+    }
+    
     // ??? WOULD IT BE CORRECT TO USE A BUFFER OF 256KB?
+    int tableOffset = sizeof(FileHeader) * (FILES_NUM + 1);
     char buffer[BLOCK_SIZE];
-
     File *file = getFileToUse(tableFile);
     setNameFile(file, name);
-    size_t offset = 0;
-    while (1)
-    {
-        // Mover el puntero de lectura al inicio del bloque
-        if (fseek(sourceFD, offset, SEEK_SET) != 0) { 
+
+    if (fseek(tarFileName, tableOffset, SEEK_SET) != 0) { 
             logError("Error: seeking in source file '%s'.\n", name);
             fclose(sourceFD);
             return;
-        }
+    }
 
+    //Crear función para obtener bloque disponible
+    //int numBlock = getBlockAvailable(tarFileName); Debe empezar desde 0
+    // Si se crea un bloque, se incrementa el contador de bloques, si no, se usa bloque libre
+    while (1)
+    {
         // Leer el bloque de datos
         size_t bytesRead = fread(buffer, 1, BLOCK_SIZE, sourceFD);  
         if (bytesRead == 0) {  // Fin del archivo
@@ -83,12 +99,27 @@ void addFile(TableFile *tableFile, char *name)
             return;
         }
 
-        FileBlock *fileBlock = getFileBlockToUse(tableFile);
-        setFileBlockData(fileBlock, buffer, bytesRead);
-        addBlock(file, fileBlock);
+        // TODO: Abrir dos archivos al mismo tiempo, el tar y el archivo actualmente (se pasa por parametro)
 
-        offset += bytesRead;
+        // ! Se debe contemplar que el Numblock obtenido sea menor al bloque en el que estoy posicionado
+
+        //Calcular el offset del bloque
+        // int offset = numBlock * (BLOCK_SIZE + sizeof(int));
+
+        // ! Si son bloques consecutivos, no es necesario calcular el offset
+        //Se usa offset para el comando fseek sobre el archivo .tar y se va moviendo
+        //Escribir el buffer sobre el archivo .tar
+
+        //Validar si los bytes leidos son iguales al block size entonces hay que escribir en un nuevo bloque
+        //Se necesita el numero de ese siguiente bloque
+
+        //! Tener cuidado de escribir un bloque de tamaño menor al BLOCK_SIZE
+        // ! Si el bloque es menor al BLOCK_SIZE, se debe llenar el espacio restante con 0
+        
+        //Llamar a la función getBlockAvailable para obtener el siguiente bloque disponible y escribir en el Tar
+        // numBlock = getBlockAvailable(tarFileName);
     }
+
     // TODO : return error code
     tableFile->filesCount++;
     close(sourceFD);

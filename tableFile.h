@@ -10,6 +10,7 @@
 typedef struct
 {
     int filesCount;
+    int blockCount;
     FileHeader *fileHeader[FILES_NUM];
     FileHeader *freeBlocksHeader;
 } TableFile;
