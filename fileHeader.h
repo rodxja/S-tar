@@ -11,6 +11,7 @@ typedef struct
     char name[FILE_NAME_SIZE];
     int first;
     int isDeleted;
+    int size;
 } FileHeader;
 
 FileHeader *newFileHeader();

@@ -10,6 +10,10 @@
         "tablefile.h": "c",
         "FILEbLOCK.C": "cpp",
         "file.h": "c",
-        "fileblock.h": "c"
+        "fileblock.h": "c",
+        "typeindex": "c",
+        "typeinfo": "c",
+        "chrono": "c",
+        "text_encoding": "c"
     }
 }

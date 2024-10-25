@@ -176,35 +176,7 @@ TableFile *loadTableFile(char *inputFile)
 
 void extractFile(TableFile *tableFile, char *outputDirectory)
 {
-    // extract all valid files
-    /* for (int i = 0; i < tableFile->filesCount; i++)
-    {
-        File *file = tableFile->files[i];
-        if (file == NULL || file->name == NULL || file->head == NULL || file->isDeleted)
-        {
-            continue;
-        }
-
-        char outputPath[256];
-        sprintf(outputPath, "%s/%s", outputDirectory, file->name);
-
-        FILE *outputFile = fopen(outputPath, "w");
-        if (outputFile == NULL)
-        {
-            logError("Error: No se pudo abrir el archivo %s\n", outputPath);
-            return;
-        }
-
-        FileBlock *currentBlock = file->head;
-        while (currentBlock != NULL)
-        {
-            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
-            currentBlock = currentBlock->next;
-        }
-
-        fclose(outputFile);
-        logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
-    } */
+    
 }
 
 // Function to serialize the TableFile structure
@@ -255,4 +227,24 @@ TableFile *deserializeTableFile(const char *filename)
 void create(TableFile *tableFile, const char *outputFile)
 {
     serializeTableFile(tableFile, outputFile);
+}
+
+void listFiles(TableFile *tableFile) {
+    if (tableFile == NULL) {
+        logError("Error: TableFile is null for listFiles\n");
+        return;
+    }
+
+    printf("Files in the table:\n");
+
+    for (int i = 0; i < tableFile->filesCount; i++) {
+        FileHeader *file = tableFile->fileHeader[i];
+        if (file != NULL && file->name != NULL && !file->isDeleted) {
+            printf("Archivo %d: %s, Tamaño: %zu bytes, Primer bloque: %d\n", i + 1, file->name, file->size, file->first);
+        }
+    }
+
+    if (tableFile->filesCount == 0) {
+        printf("No hay archivos en la tabla\n");
+    }
 }
