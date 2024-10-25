@@ -46,8 +46,9 @@ int main(int argc, char *argv[])
         {
         case 'c':
             tableFile = newTableFile();
-
-            // if c is the only option, write the table file and exit
+            tableFile->freeBlocksHeader->first = 1234567890;
+            // if c is the only option, writes the table file and exit
+            create(tableFile, argv[2]);
 
             break;
         case 'f':
@@ -82,6 +83,9 @@ int main(int argc, char *argv[])
             break;
 
         case 'x':
+            // validate that file exists
+            
+
             tableFile = loadTableFile(argv[2]);
             if (tableFile == NULL)
             {
@@ -97,10 +101,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    // TODO : this must be done if the option specifies it
-    writeTableFile(tableFile, argv[2]);
-
     return 0;
 }
-// gcc -o star main.c tableFile.c file.c fileBlock.c verbose.c
+// gcc -o star main.c tableFile.c file.c fileBlock.c verbose.c fileHeader.c
 // ./star -vvvcf test.star garabatos.txt otro.txt

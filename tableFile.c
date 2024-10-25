@@ -2,8 +2,10 @@
 #include <string.h>
 
 #include "tableFile.h"
+#include "fileHeader.h"
 #include "verbose.h"
 
+// creates a new TableFile struct with all file headers initialized as empty
 TableFile *newTableFile()
 {
     TableFile *tableFile = (TableFile *)malloc(sizeof(TableFile));
@@ -13,21 +15,20 @@ TableFile *newTableFile()
     }
     for (int i = 0; i < FILES_NUM; i++)
     {
-        tableFile->files[i] = NULL;
+        // instanciate all file headers in order to save them at the beginnig of file
+        tableFile->fileHeader[i] = newFileHeader();
     }
-    tableFile->freeBlocks = newFile();
-    setNameFile(tableFile->freeBlocks, "freeBlocks");
+
+    tableFile->freeBlocksHeader = newFileHeader();
+    setNameFileHeader(tableFile->freeBlocksHeader, "freeBlocksHeader");
 
     tableFile->filesCount = 0;
 
     return tableFile;
 }
 
-void writeTableFile(TableFile *tableFile, char *outputFile)
-{
-    serializeTableFile(tableFile, outputFile);
-}
-
+// adds a new file into file headers and stored in disk directly
+// TODO : adjust to new logic
 void addFile(TableFile *tableFile, char *name)
 {
     if (tableFile == NULL)
@@ -80,12 +81,12 @@ void addFile(TableFile *tableFile, char *name)
     }
 
     // TODO : return error code
-    tableFile->files[tableFile->filesCount] = file;
     tableFile->filesCount++;
     close(sourceFD);
 }
 
-// this retrieves the file to use
+// this retrieves the file to use, searches it there is one deleted, otherwise creates a new one
+// !!! i think i will deprecate this function
 File *getFileToUse(TableFile *tableFile)
 {
     // TODO : implement a way to detect deleted files
@@ -95,19 +96,20 @@ File *getFileToUse(TableFile *tableFile)
 // this retrieves the file block to use
 // it is taken from the free blocks list if there is any
 // otherwise a new block is created
+// TODO : adjust to new logic
 struct FileBlock *getFileBlockToUse(TableFile *tableFile)
 {
-    struct FileBlock *fileBlock = getFreeBlock(tableFile->freeBlocks);
+    /* struct FileBlock *fileBlock = getFreeBlock(tableFile->freeBlocks);
     if (fileBlock != NULL)
     {
         return fileBlock;
-    }
+    } */
     return newFileBlock();
 }
 
 int fileExists(TableFile *tableFile, char *fileName)
 {
-    for (int i = 0; i < tableFile->filesCount; i++) // this will not be correct due that there will be deleted files, iterate with while or some other way
+    /* for (int i = 0; i < tableFile->filesCount; i++) // this will not be correct due that there will be deleted files, iterate with while or some other way
     {
         if (tableFile->files[i] == NULL)
         {
@@ -121,9 +123,11 @@ int fileExists(TableFile *tableFile, char *fileName)
         {
             return 1;
         }
-    }
+    } */
     return 0;
 }
+
+// TODO : adjust to new logic, load only the file headers
 TableFile *loadTableFile(char *inputFile)
 {
     TableFile *tableFile = deserializeTableFile(inputFile);
@@ -133,7 +137,7 @@ TableFile *loadTableFile(char *inputFile)
 void extractFile(TableFile *tableFile, char *outputDirectory)
 {
     // extract all valid files
-    for (int i = 0; i < tableFile->filesCount; i++)
+    /* for (int i = 0; i < tableFile->filesCount; i++)
     {
         File *file = tableFile->files[i];
         if (file == NULL || file->name == NULL || file->head == NULL || file->isDeleted)
@@ -160,39 +164,27 @@ void extractFile(TableFile *tableFile, char *outputDirectory)
 
         fclose(outputFile);
         logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
-    }
+    } */
 }
 
 // Function to serialize the TableFile structure
-void serializeTableFile(TableFile *tableFile, const char *filename)
+void serializeTableFile(TableFile *tableFile, const char *outputFile)
 {
-    FILE *file = fopen(filename, "wb");
+    FILE *file = fopen(outputFile, "wb");
     if (!file)
     {
         logError("Failed to open file for writing");
         return;
     }
 
-    fwrite(&(tableFile->filesCount), sizeof(int), 1, file);
-
-    int i = 0;
-    for (i = 0; i < tableFile->filesCount; i++)
+    // serialize file headers
+    for (int i = 0; i < FILES_NUM; i++)
     {
-        File *f = tableFile->files[i];
-        if (f == NULL)
-        {
-            continue;
-        }
-        serializeFile(f, file);
+        serializeFileHeader(tableFile->fileHeader[i], file);
     }
 
-    if (tableFile->freeBlocks == NULL)
-    {
-        tableFile->freeBlocks = newFile();
-    }
-    serializeFile(tableFile->freeBlocks, file);
-
-    fclose(file);
+    // serialize free blocks header
+    serializeFileHeader(tableFile->freeBlocksHeader, file);
 }
 
 // Function to deserialize the TableFile structure
@@ -206,16 +198,21 @@ TableFile *deserializeTableFile(const char *filename)
         return NULL;
     }
 
-    fread(&(tableFile->filesCount), sizeof(int), 1, file);
+    // validate 
 
-    for (int i = 0; i < tableFile->filesCount; ++i)
+    // deserialize file headers
+    for (int i = 0; i < FILES_NUM; i++)
     {
-        File *f = deserializeFile(file);
-        tableFile->files[i] = f;
+        tableFile->fileHeader[i] = deserializeFileHeader(file);
     }
 
-    tableFile->freeBlocks = deserializeFile(file);
-    fclose(file);
+    // deserialize free blocks header
+    tableFile->freeBlocksHeader = deserializeFileHeader(file);
 
     return tableFile;
+}
+
+void create(TableFile *tableFile, const char *outputFile)
+{
+    serializeTableFile(tableFile, outputFile);
 }
