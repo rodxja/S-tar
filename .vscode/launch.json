@@ -34,8 +34,8 @@
             "args": [
                 "-vvcf",
                 "output.star",
-                "garabatos.txt",
-                "prueba.h"
+                "prueba.txt",
+                "garabatos.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

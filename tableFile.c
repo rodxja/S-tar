@@ -38,6 +38,7 @@ TableFile *newTableFile(const char *fileName)
 }
 
 // adds a new file into file headers and stored in disk directly
+// TODO : receive all files at once and iterate over this function, in order to open once the .star
 void addFile(TableFile *tableFile, const char *fileName)
 {
     if (tableFile == NULL)
@@ -58,7 +59,7 @@ void addFile(TableFile *tableFile, const char *fileName)
         return;
     }
 
-    FILE *sourceFD = fopen(fileName, O_RDONLY);
+    FILE *sourceFD = fopen(fileName, "rb");
     if (!sourceFD)
     {
         logError("Error: opening source file '%s'.\n", fileName);
@@ -131,13 +132,13 @@ void addFile(TableFile *tableFile, const char *fileName)
                 break;
             }
         }
-        int offset = numBlock * (BLOCK_SIZE + sizeof(int));
 
+        fileHeader->size += bytesRead;
         // write the block to the table file .star
-        size_t bytesWritten = fwrite(buffer, 1, bytesRead, star);
+        size_t bytesWritten = fwrite(buffer, 1, BLOCK_SIZE, star);
         //! Tener cuidado de escribir un bloque de tamaño menor al BLOCK_SIZE
         // ! Si el bloque es menor al BLOCK_SIZE, se debe llenar el espacio restante con 0
-        if (bytesWritten < bytesRead)
+        if (bytesWritten < bytesRead) // cambiar esta logica
         {
             logError("Error: writing tar file '%s'.\n", tableFile->fileName);
             break;

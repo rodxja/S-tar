@@ -22,6 +22,8 @@ typedef struct
     FileHeader *fileHeader[FILES_NUM];
     // freeBlocksHeader is a pointer to a FileHeader struct that represents the free blocks in the table
     FileHeader *freeBlocksHeader;
+
+    // add FILE field in order to keep open the file
 } TableFile;
 
 TableFile *newTableFile(const char *fileName);
