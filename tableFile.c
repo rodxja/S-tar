@@ -96,12 +96,12 @@ void addFile(TableFile *tableFile, const char *fileName)
         return;
     }
 
-    //
+    // previous and current block to write the block number
     int previousBlock = -1;
     // get next available block
-    int numBlock = getBlockAvailable(tableFile);
+    int currentBlock = getBlockAvailable(tableFile);
     // sets first block
-    fileHeader->first = numBlock;
+    fileHeader->first = currentBlock;
     while (1)
     {
         // reads the block from the source file
@@ -120,11 +120,55 @@ void addFile(TableFile *tableFile, const char *fileName)
 
         // calculate the offset to write the block in the table file. BLOCK_SIZE + sizeof(int) is the size of a block plus the size of the block number
         // if the block is not consecutive, then move to the next block
-        if (previousBlock + 1 != numBlock)
+        if (previousBlock + 1 != currentBlock)
         {
 
-            // !!! be caredul: numBlock can be less than the current block and we need to move back
-            int offset = numBlock * (BLOCK_SIZE + sizeof(int));
+            // !!! be careful: currentBlock can be less than the current block and we need to move backwards
+            // move forward to the next block
+            if (currentBlock > previousBlock)
+            {
+                // TODO : pending to test when delete is implemented
+                // !!! and offset move is not always from the  end of the table file
+                // 3 -> 7  it will be at the beginning of the fourth block
+                // so we need to move forward to seventh block
+                // from 4 to 5, from 5 to 6, from 6 to 7
+                // so it moves 3 blocks
+                // 7 - 3 - 1 = 4
+                // 7 : currentBlock
+                // 3 : previousBlock
+                // 1 : moved by the write of the previous block
+                int blockToMove = currentBlock - previousBlock - 1;
+                logDebug("moving forward previousBlock: %d, currentBlock: %d, blocksToMove: %s\n", previousBlock, currentBlock, blockToMove);
+                int offset = blockToMove * (BLOCK_SIZE + sizeof(int));
+                if (fseek(star, offset, SEEK_SET) != 0)
+                {
+                    logError("Error: seeking in source file '%s'.\n", fileName);
+                    fclose(sourceFD);
+                    break;
+                }
+            }
+            else
+            {
+                // TODO : pending to test when delete is implemented
+                // move backward to the next block
+                // from 7 to 3
+                // it will be at the beginning of the eighth block
+                // so we need to move back to the third block
+                // from 7 to 6, from 6 to 5, from 5 to 4, from 4 to 3
+                // so it moves 4 blocks
+                // 3 - 1 - 7 = -3
+                int blockToMove = previousBlock - 1 - currentBlock;
+                logDebug("moving backwards previousBlock: %d, currentBlock: %d, blocksToMove: %s\n", previousBlock, currentBlock, blockToMove);
+                int offset = blockToMove * (BLOCK_SIZE + sizeof(int));
+                if (fseek(star, offset, SEEK_SET) != 0)
+                {
+                    logError("Error: seeking in source file '%s'.\n", fileName);
+                    fclose(sourceFD);
+                    break;
+                }
+            }
+
+            int offset = currentBlock * (BLOCK_SIZE + sizeof(int));
             if (fseek(star, offset, SEEK_SET) != 0)
             {
                 logError("Error: seeking in source file '%s'.\n", fileName);
@@ -156,9 +200,9 @@ void addFile(TableFile *tableFile, const char *fileName)
             break;
         }
 
-        previousBlock = numBlock;
-        numBlock = getBlockAvailable(tableFile);
-        fwrite(&numBlock, sizeof(int), 1, star);
+        previousBlock = currentBlock;
+        currentBlock = getBlockAvailable(tableFile);
+        fwrite(&currentBlock, sizeof(int), 1, star);
     }
 
     // TODO : return error code
