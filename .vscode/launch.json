@@ -34,8 +34,8 @@
             "args": [
                 "-vvvvcf",
                 "output.star",
-                "garabatos.txt",
-                "prueba.txt"
+                "test/garabatos.txt",
+                "test/prueba.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -74,6 +74,13 @@ void addFile(TableFile *tableFile, const char *fileName)
         pclose(sourceFD);
         return;
     }
+    // remove the path from the file name
+    const char *lastSlash = strrchr(fileName, '/');
+    if (lastSlash != NULL)
+    {
+        fileName = lastSlash + 1;
+    }
+
     setNameFileHeader(fileHeader, fileName);
 
     FILE *star = fopen(tableFile->fileName, "rb+");
@@ -215,6 +222,18 @@ void addFile(TableFile *tableFile, const char *fileName)
 
     // TODO : return error code
     tableFile->filesCount++;
+    // update filesCount in the table file
+    int filesCountOffset = sizeof(tableFile->fileName) + ((FILES_NUM + 1) * sizeof(FileHeader));
+    if (fseek(star, filesCountOffset, SEEK_SET) != 0)
+    {
+        logError("Error: seeking in source file '%s'.\n", fileName);
+        fclose(sourceFD);
+        fclose(star);
+        return;
+    }
+
+    fwrite(&tableFile->filesCount, sizeof(int), 1, star);
+
     fclose(sourceFD);
     fclose(star);
 }
@@ -330,14 +349,6 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
     char buffer[BLOCK_SIZE];
     int tableOffset = getOffsetTableFile(tableFile);
 
-    // moves over the table file to the end of the file headers
-    if (fseek(tarFile, tableOffset, SEEK_SET) != 0)
-    {
-        logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
-        fclose(tarFile);
-        return;
-    }
-
     int filesToExtract = tableFile->filesCount;
 
     for (int i = 0; i < FILES_NUM; i++)
@@ -347,8 +358,16 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
             break;
         }
 
+        // moves over the table file to the end of the file headers
+        if (fseek(tarFile, tableOffset, SEEK_SET) != 0)
+        {
+            logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
+            fclose(tarFile);
+            return;
+        }
+
         FileHeader *fileHeader = tableFile->fileHeader[i];
-        if (fileHeader == NULL || !isFileHeaderAvailable(fileHeader))
+        if (fileHeader == NULL || isFileHeaderAvailable(fileHeader))
         {
             continue;
         }
@@ -366,11 +385,10 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
 
         int previousBlock = -1;
         int currentBlock = fileHeader->first;
-        long tarOffset = (currentBlock * BLOCK_SIZE);
 
         size_t bytesRemaining = fileHeader->size;
 
-        while (bytesRemaining > 0)
+        while (1)
         {
             // it can move forward and backars
             if (previousBlock + 1 != currentBlock)
@@ -409,7 +427,6 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
 
             size_t bytesToRead = (bytesRemaining < BLOCK_SIZE) ? bytesRemaining : BLOCK_SIZE;
             size_t bytesRead = fread(buffer, 1, bytesToRead, tarFile);
-
             if (bytesRead == 0)
             {
                 break;
@@ -427,12 +444,36 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
                 logError("Error: writing output file '%s'.\n", outputFilePath);
                 break;
             }
+            // i think it is not necessary
+            bytesRemaining -= bytesRead;
 
             previousBlock = currentBlock;
+
+            // it is the last block
+            // so move to the next one
+            if (bytesRead < BLOCK_SIZE)
+            {
+                int remainingOffset = BLOCK_SIZE - bytesRead;
+                if (fseek(tarFile, remainingOffset, SEEK_CUR) != 0)
+                {
+                    logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                    fclose(outputFile);
+                    break;
+                }
+            }
+
             // read the next block
             size_t numSizeRead = fread(&currentBlock, sizeof(int), 1, tarFile);
+            if (numSizeRead == 0)
+            {
+                break;
+            }
 
-            bytesRemaining -= bytesRead;
+            if (currentBlock == -1)
+            {
+                // end of file
+                break;
+            }
         }
         fclose(outputFile);
         filesToExtract--;
