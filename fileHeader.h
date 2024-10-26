@@ -10,9 +10,11 @@ typedef struct
 {
     char name[FILE_NAME_SIZE];
     int first;
+    int last;
     int isDeleted;
     int size;
     int index;
+    int totalBlocks;
 } FileHeader;
 
 FileHeader *newFileHeader();

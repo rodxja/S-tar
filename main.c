@@ -38,16 +38,18 @@ int main(int argc, char *argv[])
     }
 
     TableFile *tableFile;
+    char *options = argv[1];
+    char *outputFile = argv[2];
 
     // TODO : first catch which actions to do, then do them
-    for (int i = 1; i < strlen(argv[1]); i++)
+    for (int i = 1; i < strlen(options); i++)
     {
-        switch (argv[1][i])
+        switch (options[i])
         {
         case 'c':
-            tableFile = newTableFile(argv[2]);
+            tableFile = newTableFile(outputFile);
             // if c is the only option, writes the table file and exit
-            create(tableFile, argv[2]);
+            create(tableFile, outputFile);
 
             break;
         case 'f':
@@ -56,16 +58,6 @@ int main(int argc, char *argv[])
             for (int j = 3; j < argc; j++)
             {
                 char *fileName = argv[j];
-                // TODO : validate that the file exists in memory
-
-                // TODO : validate that the file is not already in the table
-                if (fileExists(tableFile, fileName))
-                {
-                    logError("Error: file '%s' already exists\n", fileName);
-                    return 1;
-                }
-                // TODO : validate that the file is not already in the free blocks
-
                 // add the file to the table
                 addFile(tableFile, fileName);
                 areFiles = 1;
@@ -84,10 +76,10 @@ int main(int argc, char *argv[])
         case 'x':
             // validate that file exists
 
-            tableFile = loadTableFile(argv[2]);
+            tableFile = loadTableFile(outputFile);
             if (tableFile == NULL)
             {
-                logError("Error: no se pudo cargar el archivo %s\n", argv[2]);
+                logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
             // TODO : pending to implement
@@ -95,22 +87,35 @@ int main(int argc, char *argv[])
             break;
 
         case 't':
-            tableFile = loadTableFile(argv[2]);
+            tableFile = loadTableFile(outputFile);
             if (tableFile == NULL)
             {
-                logError("Error: no se pudo cargar el archivo %s\n", argv[2]);
+                logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
             // listFiles(tableFile);
             break;
 
+        case 'd':
+            tableFile = loadTableFile(outputFile);
+            // validate that file exists
+            // validate that file is not already deleted
+            // deleteFile(tableFile, fileName);
+            for (int j = 3; j < argc; j++)
+            {
+                char *fileName = argv[j];
+
+                delete (tableFile, fileName);
+            }
+            break;
+
         default:
-            logError("Error: no valid option '%c' in '%s'\n", argv[1][i], argv[1]);
+            logError("Error: no valid option '%c' in '%s'\n", options[i], options);
             return 1;
         }
     }
 
     return 0;
 }
-// gcc -o star main.c tableFile.c verbose.c fileHeader.c
+// gcc -o star main.c tableFile.c verbose.c fileHeader.c fileBlock.c
 // ./star -vvvcf test.star garabatos.txt otro.txt

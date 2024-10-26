@@ -11,6 +11,7 @@
                 "tableFile.c",
                 "verbose.c",
                 "fileHeader.c",
+                "fileBlock.c",
                 "-o",
                 "a.out"
             ],

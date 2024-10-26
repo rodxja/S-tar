@@ -37,7 +37,7 @@ char *toStringFileHeader(FileHeader *fileHeader)
 {
     // name + size of int as string + extra chars in str
     char *str = (char *)malloc(sizeof(char) * FILE_NAME_SIZE + 10);
-    sprintf(str, "FileHeader: name: '%s', first: %d, isDeleted: %d, size: %d, index: %d.\n", fileHeader->name, fileHeader->first, fileHeader->isDeleted, fileHeader->size, fileHeader->index);
+    sprintf(str, "FileHeader: name: '%s', first: %d, last: %d, isDeleted: %d, size: %d, index: %d, blocks: %d.\n", fileHeader->name, fileHeader->first, fileHeader->last, fileHeader->isDeleted, fileHeader->size, fileHeader->index, fileHeader->totalBlocks);
     return str;
 }
 

@@ -4,9 +4,9 @@
 #include <stdlib.h>
 
 #include "fileHeader.h"
+#include "fileBlock.h"
 
-#define FILES_NUM 5   // 250
-#define BLOCK_SIZE 64 // 256* 1024
+#define FILES_NUM 5 // 250
 
 typedef struct
 {
@@ -28,6 +28,7 @@ typedef struct
 } TableFile;
 
 TableFile *newTableFile(const char *fileName);
+void openTableFile(TableFile *tableFile, const char *mode);
 // adds a file to the TableFile, if the TableFile is full, it will print an error message
 void addFile(TableFile *tableFile, const char *fileName);
 int getOffsetTableFile(TableFile *tableFile);
@@ -37,8 +38,8 @@ FileHeader *getFileHeaderToUse(TableFile *tableFile);
 
 int getBlockAvailable(TableFile *tableFile);
 
-// checks if a file exists in the TableFile
-int fileExists(TableFile *tableFile, const char *fileName);
+// gets a FileHeader from the TableFile by its name
+FileHeader *getFileHeader(TableFile *tableFile, const char *fileName);
 // loads a TableFile from a file
 TableFile *loadTableFile(char *inputFile);
 
@@ -50,5 +51,6 @@ TableFile *deserializeTableFile(const char *filename);
 
 // new usage
 void create(TableFile *tableFile, const char *outputFile);
+void delete(TableFile *tableFile, const char *fileName);
 
 #endif // TABLEINFO_H
