@@ -5,8 +5,8 @@
 
 #include "fileHeader.h"
 
-#define FILES_NUM 250
-#define BLOCK_SIZE 256 * 1024
+#define FILES_NUM 5   // 250
+#define BLOCK_SIZE 64 // 256* 1024
 
 typedef struct
 {
@@ -24,6 +24,7 @@ typedef struct
     FileHeader *freeBlocksHeader;
 
     // add FILE field in order to keep open the file
+    FILE *file; // this will never be serialized or deserialized
 } TableFile;
 
 TableFile *newTableFile(const char *fileName);

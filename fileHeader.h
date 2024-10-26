@@ -12,6 +12,7 @@ typedef struct
     int first;
     int isDeleted;
     int size;
+    int index
 } FileHeader;
 
 FileHeader *newFileHeader();

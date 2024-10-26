@@ -26,6 +26,7 @@ TableFile *newTableFile(const char *fileName)
     {
         // instanciate all file headers in order to save them at the beginnig of file
         tableFile->fileHeader[i] = newFileHeader();
+        tableFile->fileHeader[i]->index = i;
     }
 
     tableFile->freeBlocksHeader = newFileHeader();
@@ -75,7 +76,7 @@ void addFile(TableFile *tableFile, const char *fileName)
     }
     setNameFileHeader(fileHeader, fileName);
 
-    FILE *star = fopen(tableFile->fileName, "wb");
+    FILE *star = fopen(tableFile->fileName, "rb+");
     if (star == NULL)
     {
         logError("Error: opening tar file '%s'.\n", tableFile->fileName);
@@ -138,9 +139,9 @@ void addFile(TableFile *tableFile, const char *fileName)
                 // 3 : previousBlock
                 // 1 : moved by the write of the previous block
                 int blockToMove = currentBlock - previousBlock - 1;
-                logDebug("moving forward previousBlock: %d, currentBlock: %d, blocksToMove: %s\n", previousBlock, currentBlock, blockToMove);
+                logDebug("moving forward previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, currentBlock, blockToMove);
                 int offset = blockToMove * (BLOCK_SIZE + sizeof(int));
-                if (fseek(star, offset, SEEK_SET) != 0)
+                if (fseek(star, offset, SEEK_CUR) != 0)
                 {
                     logError("Error: seeking in source file '%s'.\n", fileName);
                     fclose(sourceFD);
@@ -158,22 +159,14 @@ void addFile(TableFile *tableFile, const char *fileName)
                 // so it moves 4 blocks
                 // 3 - 1 - 7 = -3
                 int blockToMove = previousBlock - 1 - currentBlock;
-                logDebug("moving backwards previousBlock: %d, currentBlock: %d, blocksToMove: %s\n", previousBlock, currentBlock, blockToMove);
+                logDebug("moving backwards previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, currentBlock, blockToMove);
                 int offset = blockToMove * (BLOCK_SIZE + sizeof(int));
-                if (fseek(star, offset, SEEK_SET) != 0)
+                if (fseek(star, offset, SEEK_CUR) != 0)
                 {
                     logError("Error: seeking in source file '%s'.\n", fileName);
                     fclose(sourceFD);
                     break;
                 }
-            }
-
-            int offset = currentBlock * (BLOCK_SIZE + sizeof(int));
-            if (fseek(star, offset, SEEK_SET) != 0)
-            {
-                logError("Error: seeking in source file '%s'.\n", fileName);
-                fclose(sourceFD);
-                break;
             }
         }
 
@@ -204,6 +197,21 @@ void addFile(TableFile *tableFile, const char *fileName)
         currentBlock = getBlockAvailable(tableFile);
         fwrite(&currentBlock, sizeof(int), 1, star);
     }
+
+    // we need to update the star with the information of the file header
+    // move to the beginning of the file. SEEK_SET
+    // move to the position of the file header. fileHeaderOffset
+    int fileHeaderOffset = sizeof(tableFile->fileName) + (fileHeader->index * sizeof(FileHeader));
+    if (fseek(star, fileHeaderOffset, SEEK_SET) != 0)
+    {
+        logError("Error: seeking in source file '%s'.\n", fileName);
+        fclose(sourceFD);
+        fclose(star);
+        return;
+    }
+
+    // write the file header
+    serializeFileHeader(fileHeader, star);
 
     // TODO : return error code
     tableFile->filesCount++;
@@ -243,6 +251,7 @@ int getBlockAvailable(TableFile *tableFile)
     {
         int firstBlock = tableFile->freeBlocksHeader->first;
         // TODO : read in disk the next block
+        // TODO : implement once the commant DELETE is implemented
         // open the file
         // seek to the block
         // read the block
@@ -310,6 +319,7 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
         return;
     }
 
+    // TODO :  open it once and close it once
     FILE *tarFile = fopen(tableFile->fileName, "rb");
     if (tarFile == NULL)
     {
@@ -318,12 +328,27 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
     }
 
     char buffer[BLOCK_SIZE];
-    int tableOffset = sizeof(FileHeader) * (FILES_NUM + 1);
+    int tableOffset = getOffsetTableFile(tableFile);
 
-    for (int i = 0; i < tableFile->filesCount; i++)
+    // moves over the table file to the end of the file headers
+    if (fseek(tarFile, tableOffset, SEEK_SET) != 0)
     {
+        logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
+        fclose(tarFile);
+        return;
+    }
+
+    int filesToExtract = tableFile->filesCount;
+
+    for (int i = 0; i < FILES_NUM; i++)
+    {
+        if (filesToExtract == 0)
+        {
+            break;
+        }
+
         FileHeader *fileHeader = tableFile->fileHeader[i];
-        if (fileHeader == NULL || fileHeader->isDeleted)
+        if (fileHeader == NULL || !isFileHeaderAvailable(fileHeader))
         {
             continue;
         }
@@ -339,17 +364,47 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
             return;
         }
 
-        int blockNum = fileHeader->first;
-        long tarOffset = tableOffset + (blockNum * BLOCK_SIZE);
+        int previousBlock = -1;
+        int currentBlock = fileHeader->first;
+        long tarOffset = (currentBlock * BLOCK_SIZE);
 
         size_t bytesRemaining = fileHeader->size;
 
         while (bytesRemaining > 0)
         {
-            if (fseek(tarFile, tarOffset, SEEK_SET) != 0)
+            // it can move forward and backars
+            if (previousBlock + 1 != currentBlock)
             {
-                logError("Error: seeking in tar file '%s'.\n", tableFile->fileName);
-                return;
+
+                // !!! be careful: currentBlock can be less than the current block and we need to move backwards
+                // move forward to the next block
+                if (currentBlock > previousBlock)
+                {
+                    // TODO : pending to test when delete is implemented
+                    // !!! and offset move is not always from the  end of the table file
+                    int blockToMove = currentBlock - previousBlock - 1;
+                    logDebug("moving forward previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, currentBlock, blockToMove);
+                    int offset = blockToMove * (BLOCK_SIZE + sizeof(int));
+                    if (fseek(tarFile, offset, SEEK_CUR) != 0)
+                    {
+                        logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                        fclose(outputFile);
+                        break;
+                    }
+                }
+                else
+                {
+                    // TODO : pending to test when delete is implemented
+                    int blockToMove = previousBlock - 1 - currentBlock;
+                    logDebug("moving backwards previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, currentBlock, blockToMove);
+                    int offset = blockToMove * (BLOCK_SIZE + sizeof(int));
+                    if (fseek(tarFile, offset, SEEK_CUR) != 0)
+                    {
+                        logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                        fclose(outputFile);
+                        break;
+                    }
+                }
             }
 
             size_t bytesToRead = (bytesRemaining < BLOCK_SIZE) ? bytesRemaining : BLOCK_SIZE;
@@ -373,10 +428,14 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
                 break;
             }
 
+            previousBlock = currentBlock;
+            // read the next block
+            size_t numSizeRead = fread(&currentBlock, sizeof(int), 1, tarFile);
+
             bytesRemaining -= bytesRead;
-            tarOffset += BLOCK_SIZE;
         }
         fclose(outputFile);
+        filesToExtract--;
     }
     fclose(tarFile);
 }

@@ -11,6 +11,8 @@ void test_newFileHeader()
     FileHeader *fileHeader = newFileHeader();
     assert(fileHeader != NULL);
     assert(fileHeader->first == -1);
+    assert(fileHeader->isDeleted == 0);
+    assert(fileHeader->size == 0);
     free(fileHeader);
 }
 
@@ -30,6 +32,7 @@ void test_serializeFileHeader()
     setNameFileHeader(fileHeader, name);
     fileHeader->first = 70;
     fileHeader->isDeleted = 1;
+    fileHeader->size = 1000;
     char *filename = "test_serializeFileHeader";
     FILE *file = fopen(filename, "w");
     serializeFileHeader(fileHeader, file);
@@ -45,6 +48,8 @@ void test_deserializeFileHeader()
     assert(fileHeader != NULL);
     assert(strcmp(fileHeader->name, "garabatos.pdf") == 0);
     assert(fileHeader->first == 70);
+    assert(fileHeader->isDeleted == 1);
+    assert(fileHeader->size == 1000);
     fclose(file);
     free(fileHeader);
 }

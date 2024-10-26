@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-vvvc",
+                "-vvvvc",
                 "output.star",
                 "test.txt"
             ],
@@ -32,10 +32,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-vvcf",
+                "-vvvvcf",
                 "output.star",
-                "prueba.txt",
-                "garabatos.txt"
+                "garabatos.txt",
+                "prueba.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -58,7 +58,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
             "args": [
-                "-vvvx",
+                "-vvvvx",
                 "output.star"
             ],
             "stopAtEntry": false,
