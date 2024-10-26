@@ -174,9 +174,82 @@ TableFile *loadTableFile(char *inputFile)
     return tableFile;
 }
 
-void extractFile(TableFile *tableFile, char *outputDirectory)
+void extractFile(TableFile *tableFile, char *outputDirectory, char *tarFileName)
 {
-    
+    if(tableFile == NULL)
+    {
+        logError("Error: TableFile is null for extractFile\n");
+        return;
+    }
+
+    FILE *tarFile = fopen(tarFileName, "rb");
+    if (tarFile == NULL)
+    {
+        logError("Error: opening tar file '%s'.\n", tarFileName);
+        return;
+    }
+
+    char buffer[BLOCK_SIZE];
+    int tableOffset = sizeof(FileHeader) * (FILES_NUM + 1);
+
+    for (int i = 0; i < tableFile->filesCount; i++) 
+    {
+        FileHeader *fileHeader = tableFile->fileHeader[i];
+        if(fileHeader == NULL || fileHeader->isDeleted) {
+            continue;
+        }
+
+        char outputFilePath[FILE_NAME_SIZE];
+        snprintf(outputFilePath, sizeof(outputFilePath), "%s/%s", outputDirectory, fileHeader->name);
+
+        FILE *outputFile = fopen(outputFilePath, "wb");
+        if (outputFile == NULL)
+        {
+            logError("Error: opening output file '%s'.\n", outputFilePath);
+            fclose(tarFile);
+            return;
+        }
+
+        int blockNum = fileHeader->first;
+        long tarOffset = tableOffset + (blockNum * BLOCK_SIZE);
+
+        size_t bytesRemaining = fileHeader->size;
+
+        while (bytesRemaining > 0) 
+        {
+            if (fseek(tarFile, tarOffset, SEEK_SET) != 0) 
+            {
+                logError("Error: seeking in tar file '%s'.\n", tarFileName);
+                return;
+            }
+
+            size_t bytesToRead = (bytesRemaining < BLOCK_SIZE) ? bytesRemaining : BLOCK_SIZE;
+            size_t bytesRead = fread(buffer, 1, bytesToRead, tarFile);
+
+            if (bytesRead == 0)
+            {
+                break;
+            }
+
+            if (ferror(tarFile))
+            {
+                logError("Error: reading tar file '%s'.\n", tarFileName);
+                return;
+            }
+
+            size_t bytesWritten = fwrite(buffer, 1, bytesRead, outputFile);
+            if (bytesWritten < bytesRead)
+            {
+                logError("Error: writing output file '%s'.\n", outputFilePath);
+                break;
+            }
+            
+            bytesRemaining -= bytesRead;
+            tarOffset += BLOCK_SIZE;
+        }
+        fclose(outputFile);
+    }
+    fclose(tarFile);
 }
 
 // Function to serialize the TableFile structure
