@@ -9,55 +9,12 @@
                 "-g",
                 "main.c",
                 "tableFile.c",
-                "file.c",
-                "fileBlock.c",
                 "verbose.c",
                 "fileHeader.c",
                 "-o",
                 "a.out"
             ],
             "group": "build",
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "test_fileBlock",
-            "type": "shell",
-            "command": "gcc",
-            "args": [
-                "-g", // Include debugging information
-                "fileBlock_test.c", // Replace with your source file
-                "fileBlock.c",
-                "verbose.c",
-                "-o",
-                "a.out" // Output file name
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        },
-        {
-            "label": "test_file",
-            "type": "shell",
-            "command": "gcc",
-            "args": [
-                "-g", // Include debugging information
-                "file_test.c", // Replace with your source file
-                "file.c",
-                "fileBlock.c",
-                "verbose.c",
-                "-o",
-                "a.out" // Output file name
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "problemMatcher": [
                 "$gcc"
             ]
@@ -70,8 +27,6 @@
                 "-g", // Include debugging information
                 "tableFile_test.c", // Replace with your source file
                 "tableFile.c",
-                "file.c",
-                "fileBlock.c",
                 "verbose.c",
                 "-o",
                 "a.out" // Output file name

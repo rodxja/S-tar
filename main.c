@@ -45,8 +45,7 @@ int main(int argc, char *argv[])
         switch (argv[1][i])
         {
         case 'c':
-            tableFile = newTableFile();
-            tableFile->freeBlocksHeader->first = 1234567890;
+            tableFile = newTableFile(argv[2]);
             // if c is the only option, writes the table file and exit
             create(tableFile, argv[2]);
 
@@ -95,6 +94,16 @@ int main(int argc, char *argv[])
             extractAllFiles(tableFile, ".");
             break;
 
+        case 't':
+            tableFile = loadTableFile(argv[2]);
+            if (tableFile == NULL)
+            {
+                logError("Error: no se pudo cargar el archivo %s\n", argv[2]);
+                return 1;
+            }
+            // listFiles(tableFile);
+            break;
+
         default:
             logError("Error: no valid option '%c' in '%s'\n", argv[1][i], argv[1]);
             return 1;
@@ -103,5 +112,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-// gcc -o star main.c tableFile.c file.c fileBlock.c verbose.c fileHeader.c
+// gcc -o star main.c tableFile.c verbose.c fileHeader.c
 // ./star -vvvcf test.star garabatos.txt otro.txt

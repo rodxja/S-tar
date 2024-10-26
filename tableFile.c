@@ -6,13 +6,22 @@
 #include "verbose.h"
 
 // creates a new TableFile struct with all file headers initialized as empty
-TableFile *newTableFile()
+TableFile *newTableFile(const char *fileName)
 {
+    if (fileName == NULL)
+    {
+        logError("Error: File name is null for newTableFile\n");
+        return NULL;
+    }
+
     TableFile *tableFile = (TableFile *)malloc(sizeof(TableFile));
     if (tableFile == NULL)
     {
         return NULL;
     }
+
+    strcpy(tableFile->fileName, fileName);
+
     for (int i = 0; i < FILES_NUM; i++)
     {
         // instanciate all file headers in order to save them at the beginnig of file
@@ -29,7 +38,6 @@ TableFile *newTableFile()
 }
 
 // adds a new file into file headers and stored in disk directly
-// TODO : adjust to new logic
 void addFile(TableFile *tableFile, const char *fileName)
 {
     if (tableFile == NULL)
@@ -50,80 +58,119 @@ void addFile(TableFile *tableFile, const char *fileName)
         return;
     }
 
-    int sourceFD = open(fileName, O_RDONLY);
-    if (sourceFD == -1)
+    FILE *sourceFD = fopen(fileName, O_RDONLY);
+    if (!sourceFD)
     {
         logError("Error: opening source file '%s'.\n", fileName);
         return;
     }
 
-    FileHeader *fileHeader = getFileToUse(tableFile);
+    FileHeader *fileHeader = getFileHeaderToUse(tableFile);
     if (fileHeader == NULL)
     {
         logError("Error: no file header available\n");
-        close(sourceFD);
+        pclose(sourceFD);
         return;
     }
     setNameFileHeader(fileHeader, fileName);
 
-    // ??? WOULD IT BE CORRECT TO USE A BUFFER OF 256KB?
+    FILE *star = fopen(tableFile->fileName, "wb");
+    if (star == NULL)
+    {
+        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
+        fclose(sourceFD);
+        return;
+    }
+
+    // Write the file header to the table file
+    int tableOffset = getOffsetTableFile(tableFile);
     char buffer[BLOCK_SIZE];
 
+    // moves over the table file to the end of the file headers
+    if (fseek(star, tableOffset, SEEK_SET) != 0)
+    {
+        logError("Error: seeking in source file '%s'.\n", fileName);
+        fclose(sourceFD);
+        fclose(star);
+        return;
+    }
+
+    //
+    int previousBlock = -1;
+    // get next available block
+    int numBlock = getBlockAvailable(tableFile);
+    // sets first block
+    fileHeader->first = numBlock;
     while (1)
     {
-        ssize_t bytesRead = read(sourceFD, buffer, sizeof(buffer));
+        // reads the block from the source file
+        size_t bytesRead = fread(buffer, 1, BLOCK_SIZE, sourceFD);
         if (bytesRead == 0)
-        { // End of file
+        {
             break;
         }
+
         if (bytesRead == -1)
         {
             logError("Error: reading source file '%s'.\n", fileName);
-            close(sourceFD);
+            fclose(sourceFD);
             break;
         }
 
-        // ??? what would happen if a block is exactly 256KB?
-
-        // take first block and set into the fileHeader
-        int firstBlock = tableFile->freeBlocksHeader->first;
-        if (firstBlock == -1)
+        // calculate the offset to write the block in the table file. BLOCK_SIZE + sizeof(int) is the size of a block plus the size of the block number
+        // if the block is not consecutive, then move to the next block
+        if (previousBlock + 1 != numBlock)
         {
-            firstBlock = tableFile->blockCount;
-            tableFile->blockCount++;
+
+            // !!! be caredul: numBlock can be less than the current block and we need to move back
+            int offset = numBlock * (BLOCK_SIZE + sizeof(int));
+            if (fseek(star, offset, SEEK_SET) != 0)
+            {
+                logError("Error: seeking in source file '%s'.\n", fileName);
+                fclose(sourceFD);
+                break;
+            }
+        }
+        int offset = numBlock * (BLOCK_SIZE + sizeof(int));
+
+        // write the block to the table file .star
+        size_t bytesWritten = fwrite(buffer, 1, bytesRead, star);
+        //! Tener cuidado de escribir un bloque de tamaño menor al BLOCK_SIZE
+        // ! Si el bloque es menor al BLOCK_SIZE, se debe llenar el espacio restante con 0
+        if (bytesWritten < bytesRead)
+        {
+            logError("Error: writing tar file '%s'.\n", tableFile->fileName);
+            break;
         }
 
-        with 
+        // Validar si los bytes leidos son iguales al block size entonces hay que escribir en un nuevo bloque
+        // Se necesita el numero de ese siguiente bloque
 
-        // current block must point to the next block
+        // check that bytes read and BLOCK_SIZE are the same
+        if (bytesRead < BLOCK_SIZE)
+        {
+            // write -1 as next block
+            int nextBlock = -1;
+            fwrite(&nextBlock, sizeof(int), 1, star);
+            break;
+        }
 
-        struct FileBlock *fileBlock = getFileBlockToUse(tableFile);
-        setFileBlockData(fileBlock, buffer, bytesRead);
-        addBlock(file, fileBlock);
+        previousBlock = numBlock;
+        numBlock = getBlockAvailable(tableFile);
+        fwrite(&numBlock, sizeof(int), 1, star);
     }
 
     // TODO : return error code
     tableFile->filesCount++;
-    close(sourceFD);
+    fclose(sourceFD);
+    fclose(star);
 }
 
 // this retrieves the file header to use, searches it there is one deleted, otherwise creates a new one
 FileHeader *getFileHeaderToUse(TableFile *tableFile)
 {
-    int filesToSearch = tableFile->filesCount;
-
-    if (filesToSearch == 0)
-    {
-        return 0;
-    }
-
     for (int i = 0; i < FILES_NUM; i++)
     {
-        if (filesToSearch == 0)
-        {
-            break;
-        }
-
         if (tableFile->fileHeader[i] == NULL)
         {
             continue;
@@ -133,10 +180,32 @@ FileHeader *getFileHeaderToUse(TableFile *tableFile)
         {
             return tableFile->fileHeader[i];
         }
-
-        filesToSearch--;
     }
     return NULL;
+}
+
+int getOffsetTableFile(TableFile *tableFile)
+{
+    return sizeof(tableFile->fileName) + sizeof(tableFile->blockCount) + sizeof(tableFile->filesCount) + sizeof(FileHeader) * (FILES_NUM + 1);
+}
+
+// checks if a block is available in the table file
+// first from the free blocks, otherwise creates a new one
+// starts from zero
+int getBlockAvailable(TableFile *tableFile)
+{
+    if (tableFile->freeBlocksHeader->first != -1)
+    {
+        int firstBlock = tableFile->freeBlocksHeader->first;
+        // TODO : read in disk the next block
+        // open the file
+        // seek to the block
+        // read the block
+        // close the file
+
+        return firstBlock;
+    }
+    return tableFile->blockCount++;
 }
 
 int fileExists(TableFile *tableFile, const char *fileName)
@@ -188,75 +257,83 @@ TableFile *loadTableFile(char *inputFile)
     return tableFile;
 }
 
-// TODO : add the file name of the .star file
 void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
 {
     if (tableFile == NULL)
     {
-        logError("Error: TableFile is null for extractAllFiles\n");
+        logError("Error: TableFile is null for extractFile\n");
         return;
     }
 
-    if (outputDirectory == NULL)
+    FILE *tarFile = fopen(tableFile->fileName, "rb");
+    if (tarFile == NULL)
     {
-        logError("Error: outputDirectory is null for extractAllFiles\n");
+        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
         return;
     }
 
-    if (tableFile->filesCount == 0)
-    {
-        logInfo("Info: No files to extract\n");
-        return;
-    }
+    char buffer[BLOCK_SIZE];
+    int tableOffset = sizeof(FileHeader) * (FILES_NUM + 1);
 
-    // number of files to extract
-    int filesToExtract = tableFile->filesCount;
-    // extract all valid files
     for (int i = 0; i < tableFile->filesCount; i++)
     {
-        if (filesToExtract == 0)
-        {
-            break;
-        }
-
         FileHeader *fileHeader = tableFile->fileHeader[i];
-        if (fileHeader == NULL)
-        {
-            logError("Error: fileHeader is null in extractAllFiles\n");
-        }
-
-        // check if the file is deleted or has no blocks
-        if (fileHeader->isDeleted || fileHeader->first == -1)
+        if (fileHeader == NULL || fileHeader->isDeleted)
         {
             continue;
         }
 
-        char outputPath[256];
-        sprintf(outputPath, "%s/%s", outputDirectory, fileHeader->name);
-        logInfo("Extracting file %s to %s\n", fileHeader->name, outputPath);
+        char outputFilePath[FILE_NAME_SIZE];
+        snprintf(outputFilePath, sizeof(outputFilePath), "%s/%s", outputDirectory, fileHeader->name);
 
-        FILE *outputFile = fopen(outputPath, "w");
+        FILE *outputFile = fopen(outputFilePath, "wb");
         if (outputFile == NULL)
         {
-            logError("Error: No se pudo abrir el archivo %s\n", outputPath);
+            logError("Error: opening output file '%s'.\n", outputFilePath);
+            fclose(tarFile);
             return;
         }
 
-        // by the first block start to read from memory
+        int blockNum = fileHeader->first;
+        long tarOffset = tableOffset + (blockNum * BLOCK_SIZE);
 
-        // TODO : use seek to move to the first block
+        size_t bytesRemaining = fileHeader->size;
 
-        FileBlock *currentBlock = file->head;
-        while (currentBlock != NULL)
+        while (bytesRemaining > 0)
         {
-            fwrite(currentBlock->data, currentBlock->size, 1, outputFile);
-            currentBlock = currentBlock->next;
-        }
+            if (fseek(tarFile, tarOffset, SEEK_SET) != 0)
+            {
+                logError("Error: seeking in tar file '%s'.\n", tableFile->fileName);
+                return;
+            }
 
+            size_t bytesToRead = (bytesRemaining < BLOCK_SIZE) ? bytesRemaining : BLOCK_SIZE;
+            size_t bytesRead = fread(buffer, 1, bytesToRead, tarFile);
+
+            if (bytesRead == 0)
+            {
+                break;
+            }
+
+            if (ferror(tarFile))
+            {
+                logError("Error: reading tar file '%s'.\n", tableFile->fileName);
+                return;
+            }
+
+            size_t bytesWritten = fwrite(buffer, 1, bytesRead, outputFile);
+            if (bytesWritten < bytesRead)
+            {
+                logError("Error: writing output file '%s'.\n", outputFilePath);
+                break;
+            }
+
+            bytesRemaining -= bytesRead;
+            tarOffset += BLOCK_SIZE;
+        }
         fclose(outputFile);
-        filesToExtract--;
-        logInfo("El archivo %s ha sido extraído con éxito!\n", file->name);
     }
+    fclose(tarFile);
 }
 
 // Function to serialize the TableFile structure
@@ -268,6 +345,8 @@ void serializeTableFile(TableFile *tableFile, const char *outputFile)
         logError("Failed to open file for writing");
         return;
     }
+
+    fwrite(&tableFile->fileName, sizeof(tableFile->fileName), 1, file);
 
     // serialize file headers
     for (int i = 0; i < FILES_NUM; i++)
@@ -286,7 +365,7 @@ void serializeTableFile(TableFile *tableFile, const char *outputFile)
 // Function to deserialize the TableFile structure
 TableFile *deserializeTableFile(const char *filename)
 {
-    TableFile *tableFile = newTableFile();
+    TableFile *tableFile = newTableFile(filename);
     FILE *file = fopen(filename, "rb");
     if (!file)
     {
@@ -294,7 +373,7 @@ TableFile *deserializeTableFile(const char *filename)
         return NULL;
     }
 
-    // validate
+    fread(&tableFile->fileName, sizeof(tableFile->fileName), 1, file);
 
     // deserialize file headers
     for (int i = 0; i < FILES_NUM; i++)
@@ -316,4 +395,29 @@ TableFile *deserializeTableFile(const char *filename)
 void create(TableFile *tableFile, const char *outputFile)
 {
     serializeTableFile(tableFile, outputFile);
+}
+
+void listFiles(TableFile *tableFile)
+{
+    if (tableFile == NULL)
+    {
+        logError("Error: TableFile is null for listFiles\n");
+        return;
+    }
+
+    printf("Files in the table:\n");
+
+    for (int i = 0; i < tableFile->filesCount; i++)
+    {
+        FileHeader *file = tableFile->fileHeader[i];
+        if (file != NULL && file->name != NULL && !file->isDeleted)
+        {
+            printf("Archivo %d: %s, Tamaño: %u bytes, Primer bloque: %d\n", i + 1, file->name, file->size, file->first);
+        }
+    }
+
+    if (tableFile->filesCount == 0)
+    {
+        printf("No hay archivos en la tabla\n");
+    }
 }

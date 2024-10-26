@@ -12,7 +12,7 @@ FileHeader *newFileHeader()
     return fileHeader;
 }
 
-void setNameFileHeader(FileHeader *fileHeader, char *name)
+void setNameFileHeader(FileHeader *fileHeader, const char *name)
 {
     strcpy(fileHeader->name, name);
 }
