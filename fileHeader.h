@@ -23,5 +23,6 @@ void serializeFileHeader(FileHeader *fileHeader, FILE *file);
 FileHeader *deserializeFileHeader(FILE *file);
 char *toStringFileHeader(FileHeader *fileHeader);
 int isFileHeaderAvailable(FileHeader *fileHeader);
+void printFileHeader(FileHeader *fileHeader, int *blockList);
 
 #endif // FILEHEADER_H

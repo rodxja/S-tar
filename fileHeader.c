@@ -45,3 +45,28 @@ int isFileHeaderAvailable(FileHeader *fileHeader)
 {
     return fileHeader->first == -1 || fileHeader->isDeleted;
 }
+
+void printFileHeader(FileHeader *fileHeader, int *blockList)
+{
+    logInfo(toStringFileHeader(fileHeader));
+
+    logInfo("Blocks : ");
+    if (blockList == NULL)
+    {
+        logInfo("no blocks\n");
+        return;
+    }
+
+    for (int j = 0; j < fileHeader->totalBlocks; j++)
+    {
+        if (j == fileHeader->totalBlocks - 1)
+        {
+            logInfo("%d", blockList[j]);
+        }
+        else
+        {
+            logInfo("%d -> ", blockList[j]);
+        }
+    }
+    logInfo("\n");
+}
