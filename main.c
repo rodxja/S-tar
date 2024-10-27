@@ -5,6 +5,7 @@
 
 #include "tableFile.h"
 #include "verbose.h"
+#include <unistd.h>
 
 int main(int argc, char *argv[])
 {
@@ -108,6 +109,23 @@ int main(int argc, char *argv[])
                 delete (tableFile, fileName);
             }
             break;
+        
+        case 'r':
+            tableFile = loadTableFile(outputFile);
+            if (tableFile == NULL)
+            {
+                logError("Error: no se pudo cargar el archivo %s\n", outputFile);
+                return 1;
+            }
+            
+            for (int i = optind; i < argc; i++)
+            {
+                char *fileName = argv[i];
+                addFile(tableFile, fileName);
+            }
+            break;
+            
+
 
         default:
             logError("Error: no valid option '%c' in '%s'\n", options[i], options);
