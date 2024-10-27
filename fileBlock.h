@@ -17,5 +17,6 @@ void setNameFileBlock(FileBlock *fileBlock, const char data[BLOCK_SIZE]);
 void setNextFileBlock(FileBlock *fileBlock, int next);
 void serializeFileBlock(FileBlock *fileBlock, FILE *file);
 FileBlock *deserializeFileBlock(FILE *file);
+int getOffsetFileBlock();
 
 #endif // FILEBLOCK_H

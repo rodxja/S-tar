@@ -154,7 +154,7 @@ void addFile(TableFile *tableFile, const char *fileName)
             break;
         }
 
-        // calculate the offset to write the block in the table file. BLOCK_SIZE + sizeof(int) is the size of a block plus the size of the block number
+        // calculate the offset to write the block in the table file. getOffsetFileBlock() is the size of a block plus the size of the block number
         // if the block is not consecutive, then move to the next block
         // TODO : this section convert to a function, and use it in extractAllFiles too
         if (previousBlock + 1 != currentBlock)
@@ -176,7 +176,7 @@ void addFile(TableFile *tableFile, const char *fileName)
                 // 1 : moved by the write of the previous block
                 int blocksToMove = currentBlock - previousBlock - 1;
                 logDebug("moving forward previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, currentBlock, blocksToMove);
-                int offset = blocksToMove * (BLOCK_SIZE + sizeof(int));
+                int offset = blocksToMove * getOffsetFileBlock();
                 if (fseek(star, offset, SEEK_CUR) != 0)
                 {
                     logError("Error: seeking in source file '%s'.\n", fileName);
@@ -196,7 +196,7 @@ void addFile(TableFile *tableFile, const char *fileName)
                 // 3 - 1 - 7 = -3
                 int blocksToMove = previousBlock - 1 - currentBlock;
                 logDebug("moving backwards previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, currentBlock, blocksToMove);
-                int offset = blocksToMove * (BLOCK_SIZE + sizeof(int));
+                int offset = blocksToMove * getOffsetFileBlock();
                 if (fseek(star, offset, SEEK_CUR) != 0)
                 {
                     logError("Error: seeking in source file '%s'.\n", fileName);
@@ -207,6 +207,8 @@ void addFile(TableFile *tableFile, const char *fileName)
         }
 
         fileHeader->size += bytesRead;
+        fileHeader->last = currentBlock;
+        fileHeader->totalBlocks++;
 
         // check that bytes read and BLOCK_SIZE are the same,
         // if bytes read is less than BLOCK_SIZE, then it is the last block
@@ -217,8 +219,6 @@ void addFile(TableFile *tableFile, const char *fileName)
             break;
         }
 
-        fileHeader->last = currentBlock;
-        fileHeader->totalBlocks++;
         previousBlock = currentBlock;
         currentBlock = getBlockAvailable(tableFile);
         fileBlock->next = currentBlock;
@@ -256,6 +256,8 @@ void addFile(TableFile *tableFile, const char *fileName)
     }
 
     fwrite(&tableFile->filesCount, sizeof(int), 1, star);
+    // update blockCount in the table file
+    fwrite(&tableFile->blockCount, sizeof(int), 1, star);
 
     fclose(sourceFD);
     fclose(star);
@@ -285,7 +287,7 @@ int getOffsetTableFile(TableFile *tableFile)
 }
 
 // checks if a block is available in the table file
-// first from the free blocks, otherwise creates a new one
+// first from the free blocks, otherwise takes the counter of blockCOunt
 // starts from zero
 int getBlockAvailable(TableFile *tableFile)
 {
@@ -383,7 +385,7 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
                     // !!! and offset move is not always from the  end of the table file
                     int blocksToMove = fileBlock->next - previousBlock - 1;
                     logDebug("moving forward previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, fileBlock->next, blocksToMove);
-                    int offset = blocksToMove * (BLOCK_SIZE + sizeof(int));
+                    int offset = blocksToMove * getOffsetFileBlock();
                     if (fseek(tarFile, offset, SEEK_CUR) != 0)
                     {
                         logError("Error: seeking in source file '%s'.\n", fileHeader->name);
@@ -396,7 +398,7 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
                     // TODO : pending to test when delete is implemented
                     int blocksToMove = previousBlock - 1 - fileBlock->next;
                     logDebug("moving backwards previousBlock: %d, currentBlock: %d, blocksToMove: %d\n", previousBlock, fileBlock->next, blocksToMove);
-                    int offset = blocksToMove * (BLOCK_SIZE + sizeof(int));
+                    int offset = blocksToMove * getOffsetFileBlock();
                     if (fseek(tarFile, offset, SEEK_CUR) != 0)
                     {
                         logError("Error: seeking in source file '%s'.\n", fileHeader->name);
@@ -559,25 +561,82 @@ void delete(TableFile *tableFile, const char *fileName)
         return;
     }
 
+    // TODO : pending to implement
+    // open the file
+    FILE *star = fopen(tableFile->fileName, "rb+");
+    if (star == NULL)
+    {
+        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
+        return;
+    }
+
     // sets the file as deleted
     fileHeader->isDeleted = 1;
     // decrease the files count
     tableFile->filesCount--;
     // add into the free blocks
+    tableFile->freeBlocksHeader->last = fileHeader->last;
+    tableFile->freeBlocksHeader->size += fileHeader->size;
+    tableFile->freeBlocksHeader->totalBlocks += fileHeader->totalBlocks;
+
     if (tableFile->freeBlocksHeader->first == -1)
     {
         tableFile->freeBlocksHeader->first = fileHeader->first;
     }
-    else
+    else // when there are already free blocks
     {
-        // TODO : pending to implement
-        // open the file
+
         // seek to the last block
+        int offset = getOffsetTableFile(tableFile) + fileHeader->last * (getOffsetFileBlock());
+        // it will be at the beginning of the last block
+        if (fseek(star, offset, SEEK_SET) != 0)
+        {
+            logError("Error: seeking in source file '%s'.\n", fileName);
+            fclose(star);
+            return;
+        }
+        // read the last block
+        FileBlock *lastBlock = deserializeFileBlock(star);
+
+        // go at the beginning of the current read block
+        if (fseek(star, offset, SEEK_SET) != 0)
+        {
+            logError("Error: seeking in source file '%s'.\n", fileName);
+            fclose(star);
+            return;
+        }
+        lastBlock->next = fileHeader->first;
         // lastBlock->next = fileHeader->first
+        serializeFileBlock(lastBlock, star);
         // write the next block
         // close the file
     }
-    // write the freeBlocksHeader updated
+
+    // write the file header deleted
+    int offsetFileHeader = sizeof(tableFile->fileName) + (fileHeader->index * sizeof(FileHeader));
+    if (fseek(star, offsetFileHeader, SEEK_SET) != 0)
+    {
+        logError("Error: seeking in source file '%s'.\n", fileName);
+        fclose(star);
+        return;
+    }
+
+    serializeFileHeader(fileHeader, star);
+
+    // write file header for the free blocks
+    int fileHeaderOffset = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader));
+    if (fseek(star, fileHeaderOffset, SEEK_SET) != 0)
+    {
+        logError("Error: seeking in source file '%s'.\n", fileName);
+        fclose(star);
+        return;
+    }
+
+    serializeFileHeader(tableFile->freeBlocksHeader, star);
+    fwrite(&tableFile->filesCount, sizeof(int), 1, star);
+    tableFile->blockCount -= fileHeader->totalBlocks;
+    fwrite(&tableFile->blockCount, sizeof(int), 1, star);
+    fclose(star);
 }
 
 FileHeader *getFileHeader(TableFile *tableFile, const char *fileName)
