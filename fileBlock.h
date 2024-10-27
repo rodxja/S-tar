@@ -8,8 +8,9 @@
 
 typedef struct
 {
-    char data[BLOCK_SIZE];
     int next;
+    int size;
+    char data[BLOCK_SIZE];
 } FileBlock;
 
 FileBlock *newFileBlock();

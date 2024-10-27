@@ -31,7 +31,7 @@ TableFile *newTableFile(const char *fileName);
 void openTableFile(TableFile *tableFile, const char *mode);
 // adds a file to the TableFile, if the TableFile is full, it will print an error message
 void addFile(TableFile *tableFile, const char *fileName);
-int getOffsetTableFile(TableFile *tableFile);
+int getOffsetTableFile();
 
 // writes the TableFile to a file
 FileHeader *getFileHeaderToUse(TableFile *tableFile);
@@ -52,8 +52,9 @@ TableFile *deserializeTableFile(const char *filename);
 // new usage
 void create(TableFile *tableFile, const char *outputFile);
 void delete(TableFile *tableFile, const char *fileName);
+void update(TableFile *tableFile, const char *fileName);
 
-//list files
+// list files
 void listFiles(TableFile *tableFile);
 
 #endif // TABLEINFO_H
