@@ -54,6 +54,8 @@ void create(TableFile *tableFile, const char *outputFile);
 void delete(TableFile *tableFile, const char *fileName);
 void update(TableFile *tableFile, const char *fileName);
 
+int *getBlockList(TableFile *tableFile, FileHeader *fileHeader);
+
 // list files
 void listFiles(TableFile *tableFile);
 
