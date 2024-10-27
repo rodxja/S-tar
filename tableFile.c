@@ -517,18 +517,22 @@ void listFiles(TableFile *tableFile)
         return;
     }
 
-    printf("Files in the table:\n");
+    printf("Archivos en la tabla:\n");
 
-    for (int i = 0; i < tableFile->filesCount; i++)
+    int archivosListados = 0;
+
+    for (int i = 0; i < FILES_NUM; i++)
     {
         FileHeader *file = tableFile->fileHeader[i];
-        if (file != NULL && file->name != NULL && !file->isDeleted)
+
+        if (file != NULL && file->name[0] != '\0' && !file->isDeleted)
         {
-            printf("Archivo %d: %s, Tamaño: %u bytes, Primer bloque: %d\n", i + 1, file->name, file->size, file->first);
+            logInfo(toStringFileHeader(file));
+            archivosListados++;
         }
     }
 
-    if (tableFile->filesCount == 0)
+    if (archivosListados == 0)
     {
         printf("No hay archivos en la tabla\n");
     }

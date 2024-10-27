@@ -25,17 +25,14 @@
             "type": "shell",
             "command": "gcc",
             "args": [
-                "-g", // Include debugging information
-                "tableFile_test.c", // Replace with your source file
+                "-g",
+                "tableFile_test.c",
                 "tableFile.c",
                 "verbose.c",
                 "-o",
-                "a.out" // Output file name
+                "a.out"
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "problemMatcher": [
                 "$gcc"
             ]
@@ -45,20 +42,40 @@
             "type": "shell",
             "command": "gcc",
             "args": [
-                "-g", // Include debugging information
-                "fileHeader_test.c", // Replace with your source file
+                "-g",
+                "fileHeader_test.c",
                 "fileHeader.c",
                 "verbose.c",
                 "-o",
-                "a.out" // Output file name
+                "a.out"
+            ],
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "type": "cppbuild",
+            "label": "C/C++: gcc compilar archivo activo",
+            "command": "/usr/bin/gcc",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-g",
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
             ],
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": [
-                "$gcc"
-            ]
+            "detail": "Tarea generada por el depurador."
         }
     ]
 }

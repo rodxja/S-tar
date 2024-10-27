@@ -54,19 +54,19 @@ int main(int argc, char *argv[])
             break;
         case 'f':
             // TODO : validate that there are files to add
-            int areFiles = 0;
+            // int areFiles = 0;
             for (int j = 3; j < argc; j++)
             {
                 char *fileName = argv[j];
                 // add the file to the table
                 addFile(tableFile, fileName);
-                areFiles = 1;
+                // areFiles = 1;
             }
-            if (!areFiles)
-            {
-                logError("Error: no files to add\n");
-                return 1;
-            }
+            // if (!areFiles)
+            // {
+            //     logError("Error: no files to add\n");
+            //     return 1;
+            // }
             break;
 
         case 'v': // verbose
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
                 logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
-            // listFiles(tableFile);
+            listFiles(tableFile);
             break;
 
         case 'd':
@@ -117,5 +117,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-// gcc -o star main.c tableFile.c verbose.c fileHeader.c fileBlock.c
+//  gcc -o star main.c tableFile.c verbose.c fileHeader.c fileBlock.c
 // ./star -vvvcf test.star garabatos.txt otro.txt

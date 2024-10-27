@@ -53,4 +53,7 @@ TableFile *deserializeTableFile(const char *filename);
 void create(TableFile *tableFile, const char *outputFile);
 void delete(TableFile *tableFile, const char *fileName);
 
+//list files
+void listFiles(TableFile *tableFile);
+
 #endif // TABLEINFO_H
