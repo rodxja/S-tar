@@ -8,9 +8,11 @@ FileHeader *newFileHeader()
 {
     FileHeader *fileHeader = (FileHeader *)malloc(sizeof(FileHeader));
     fileHeader->first = -1; // -1 means that the file has no blocks
+    fileHeader->last = -1;
     fileHeader->isDeleted = 0;
     fileHeader->size = 0;
     fileHeader->index = -1;
+    fileHeader->totalBlocks = 0;
     return fileHeader;
 }
 
@@ -67,4 +69,19 @@ void printFileHeader(FileHeader *fileHeader, int *blockList)
         }
     }
     logInfo("\n");
+}
+
+int getOffsetFileHeader()
+{
+    return sizeof(FileHeader); // sizeof(char[FILE_NAME_SIZE]) + 6 * sizeof(int);
+}
+
+void resetFileHeader(FileHeader *fileHeader)
+{
+    fileHeader->first = -1;
+    fileHeader->last = -1;
+    fileHeader->isDeleted = 0;
+    fileHeader->size = 0;
+    fileHeader->index = -1;
+    fileHeader->totalBlocks = 0;
 }

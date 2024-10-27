@@ -82,12 +82,14 @@ int main(int argc, char *argv[])
 
         case 't':
             tableFile = loadTableFile(outputFile);
+            openTableFile(tableFile, "rb");
             if (tableFile == NULL)
             {
                 logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
             listFiles(tableFile);
+            closeTableFile(tableFile);
             break;
 
         case 'd':
@@ -105,7 +107,7 @@ int main(int argc, char *argv[])
 
             closeTableFile(tableFile);
             break;
-        
+
         case 'r':
             tableFile = loadTableFile(outputFile);
             if (tableFile == NULL)
@@ -113,15 +115,13 @@ int main(int argc, char *argv[])
                 logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
-            
+
             for (int i = 3; i < argc; i++)
             {
                 char *fileName = argv[i];
                 addFile(tableFile, fileName);
             }
             break;
-            
-
 
         case 'u':
             tableFile = loadTableFile(outputFile);
@@ -133,6 +133,13 @@ int main(int argc, char *argv[])
 
                 update(tableFile, fileName);
             }
+            break;
+
+        case 'p':
+            tableFile = loadTableFile(outputFile);
+            openTableFile(tableFile, "rb+");
+            pack(tableFile);
+            closeTableFile(tableFile);
             break;
 
         default:

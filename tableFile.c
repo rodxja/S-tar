@@ -1,5 +1,6 @@
 #include <fcntl.h>
 #include <string.h>
+#include <unistd.h> // For ftruncate
 
 #include "tableFile.h"
 #include "fileHeader.h"
@@ -599,7 +600,7 @@ void delete(TableFile *tableFile, const char *fileName)
     writeOrderedBlockList(tableFile, tableFile->freeBlocksHeader);
 
     // write file header for the free blocks
-    int offsetFreeBlocksHeader = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader)); // this is incorrect because now the list will be ordered
+    int offsetFreeBlocksHeader = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader));
     if (fseek(tableFile->file, offsetFreeBlocksHeader, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
@@ -841,6 +842,12 @@ int *getBlockList(TableFile *tableFile, FileHeader *fileHeader)
         return NULL;
     }
 
+    if (tableFile->file == NULL)
+    {
+        logError("Error: File is null for getBlockList\n");
+        return NULL;
+    }
+
     if (fileHeader == NULL)
     {
         logError("Error: FileHeader is null for getBlockList\n");
@@ -852,9 +859,6 @@ int *getBlockList(TableFile *tableFile, FileHeader *fileHeader)
         return NULL;
     }
 
-    // opens tableFile->fileName
-    FILE *star = fopen(tableFile->fileName, "rb");
-
     // moves to the first block in the fileHeader->first
     int currentBlock = fileHeader->first;
     int *blockList = (int *)malloc(sizeof(int) * fileHeader->totalBlocks);
@@ -863,18 +867,17 @@ int *getBlockList(TableFile *tableFile, FileHeader *fileHeader)
     {
         // moves to the block
         int offset = getOffsetTableFile() + currentBlock * (getOffsetFileBlock());
-        if (fseek(star, offset, SEEK_SET) != 0)
+        if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", fileHeader->name);
-            fclose(star);
             return NULL;
         }
 
         // reads the block
-        FileBlock *fileBlock = deserializeFileBlock(star);
+        FileBlock *fileBlock = deserializeFileBlock(tableFile->file);
         if (fileBlock == NULL)
         {
-            fclose(star);
+            // fclose(star);
             return NULL;
         }
 
@@ -906,19 +909,157 @@ int *orderedBlockList(TableFile *tableFile, FileHeader *FileHeader)
     return blockList;
 }
 
-void pack(TableFile *TableFile)
+void pack(TableFile *tableFile) // also removes the deleted files
 {
-    // get list of freeBlocks
-    // order the list of freeBlocks
-
-    // with totalBlocks we can recreate a list of used blocks
+    // get list of freeBlocks, this list will be ordered from smaller to bigger
+    int *freeBlocks = getBlockList(tableFile, tableFile->freeBlocksHeader);
 
     // iterate over all file headers
-    // iterate over all blocks of the file header
+    for (int i = 0; i < FILES_NUM; i++)
+    {
+        FileHeader *fileHeader = tableFile->fileHeader[i];
+        if (fileHeader == NULL)
+        {
+            continue;
+        }
 
-    // if the block in fileheader is less than the one in freeBlocks
-    // then realocate the block ok the fileHeade
-    // free the old block in freeBlocks
+        if (isFileHeaderAvailable(fileHeader))
+        {
+            continue;
+        }
+
+        if (tableFile->freeBlocksHeader->totalBlocks == 0)
+        {
+            break;
+        }
+
+        // get the ordered block list
+        int *fileHeaderBlocks = getBlockList(tableFile, fileHeader);
+
+        int previousBlock = -1;
+        int currentBlock = -1;
+
+        // set the first block of the file header
+        fileHeader->first = freeBlocks[0];
+
+        int movedBlocks = 0;
+        // iterate over all blocks of the file header
+        // this iteration will remove and add a block from the freeBlocks
+        for (int j = 0; j < fileHeader->totalBlocks; j++)
+        {
+            fileHeader->last = freeBlocks[0];
+            currentBlock = fileHeaderBlocks[j];
+            int newPositionBlock = freeBlocks[0];
+            if (newPositionBlock > currentBlock) // will never be equal because blocks has a unique number
+            {
+                continue;
+            }
+            movedBlocks++;
+
+            // when previous is valid we need to go back and update its next block
+            if (previousBlock != -1)
+            {
+                // move to the previous block
+                int offset = getOffsetTableFile() + previousBlock * getOffsetFileBlock();
+                if (fseek(tableFile->file, offset, SEEK_SET) != 0)
+                {
+                    logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                    return;
+                }
+
+                // write the next block
+                // the first int is the next block
+                size_t bytesWritten = fwrite(&newPositionBlock, sizeof(newPositionBlock), 1, tableFile->file);
+                if (bytesWritten < 1)
+                {
+                    logError("Error: writing next block\n");
+                    return;
+                }
+            }
+
+            // moves to the current block
+            int offset = getOffsetTableFile() + currentBlock * (getOffsetFileBlock());
+            if (fseek(tableFile->file, offset, SEEK_SET) != 0)
+            {
+                logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                return;
+            }
+
+            // read the block
+            FileBlock *currentFileBlock = deserializeFileBlock(tableFile->file);
+
+            // move to new position block given by newPositionBlock
+            int newOffset = getOffsetTableFile() + newPositionBlock * (getOffsetFileBlock());
+            if (fseek(tableFile->file, newOffset, SEEK_SET) != 0)
+            {
+                logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                return;
+            }
+
+            // write the block
+            serializeFileBlock(currentFileBlock, tableFile->file);
+
+            // as first block was used now i need to move the freeBlocks[i+1] into freeBlocks[i]
+            // and once current block has a space in freeBlocks, then i need to add and stop
+            for (int k = 0; k < tableFile->freeBlocksHeader->totalBlocks - 1; k++)
+            {
+                if (currentBlock < freeBlocks[k + 1])
+                {
+                    freeBlocks[k] = currentBlock;
+                    break;
+                }
+                freeBlocks[k] = freeBlocks[k + 1];
+                if (k == tableFile->freeBlocksHeader->totalBlocks - 2)
+                {
+                    freeBlocks[k + 1] = currentBlock;
+                }
+            }
+            previousBlock = newPositionBlock;
+        }
+
+        if (movedBlocks > 0)
+        {
+            // write the file header
+            int offsetFileHeader = sizeof(tableFile->fileName) + (fileHeader->index * sizeof(FileHeader));
+            if (fseek(tableFile->file, offsetFileHeader, SEEK_SET) != 0)
+            {
+                logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+                return;
+            }
+            serializeFileHeader(fileHeader, tableFile->file);
+        }
+    }
+
+    // at this moment all free blocks are at the end of the file
+    // so we need to update the freeBlocksHeader
+    resetFileHeader(tableFile->freeBlocksHeader);
+
+    // write the freeBlocksHeader
+    int offsetFreeBlocksHeader = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader));
+    if (fseek(tableFile->file, offsetFreeBlocksHeader, SEEK_SET) != 0)
+    {
+        logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
+        return;
+    }
+    serializeFileHeader(tableFile->freeBlocksHeader, tableFile->file);
+
+    // Offset from which you want to keep the file's content
+    int finalOffset = getOffsetTableFile() + tableFile->blockCount * getOffsetFileBlock();
+
+    // Get the file descriptor from FILE *
+    int fd = fileno(tableFile->file);
+    if (fd == -1)
+    {
+        logError("Error getting file descriptor");
+        return;
+    }
+
+    // Truncate the file using ftruncate
+    if (ftruncate(fd, finalOffset) == -1)
+    {
+        logError("Error truncating file");
+        return;
+    }
 }
 
 // this will write the ordered block list

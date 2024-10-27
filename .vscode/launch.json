@@ -110,7 +110,6 @@
             "args": [
                 "-vvvvd",
                 "output.star",
-                "file.json",
                 "prueba.txt"
             ],
             "stopAtEntry": false,
@@ -137,6 +136,30 @@
                 "-vvvvu",
                 "output.star",
                 "test/garabatos.txt"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "main",
+            "miDebuggerPath": "/usr/bin/gdb" // Path to gdb
+        },
+        {
+            "name": "pack",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/a.out", // Change this to your compiled program's path
+            "args": [
+                "-vvvvp",
+                "output.star"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

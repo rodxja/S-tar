@@ -24,5 +24,7 @@ FileHeader *deserializeFileHeader(FILE *file);
 char *toStringFileHeader(FileHeader *fileHeader);
 int isFileHeaderAvailable(FileHeader *fileHeader);
 void printFileHeader(FileHeader *fileHeader, int *blockList);
+int getOffsetFileHeader();
+void resetFileHeader(FileHeader *fileHeader);
 
 #endif // FILEHEADER_H
