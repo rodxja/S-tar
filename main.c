@@ -54,8 +54,6 @@ int main(int argc, char *argv[])
 
             break;
         case 'f':
-            // TODO : validate that there are files to add
-            // int areFiles = 0;
             for (int j = 3; j < argc; j++)
             {
                 char *fileName = argv[j];
@@ -63,11 +61,6 @@ int main(int argc, char *argv[])
                 addFile(tableFile, fileName);
                 // areFiles = 1;
             }
-            // if (!areFiles)
-            // {
-            //     logError("Error: no files to add\n");
-            //     return 1;
-            // }
             break;
 
         case 'v': // verbose
@@ -126,6 +119,18 @@ int main(int argc, char *argv[])
             break;
             
 
+
+        case 'u':
+            tableFile = loadTableFile(outputFile);
+            // validate that file exists
+
+            for (int j = 3; j < argc; j++)
+            {
+                char *fileName = argv[j];
+
+                update(tableFile, fileName);
+            }
+            break;
 
         default:
             logError("Error: no valid option '%c' in '%s'\n", options[i], options);

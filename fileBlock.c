@@ -51,3 +51,8 @@ FileBlock *deserializeFileBlock(FILE *file)
 
     return fileBlock;
 }
+
+int getOffsetFileBlock()
+{
+    return sizeof(FileBlock);
+}
