@@ -110,8 +110,8 @@
             "args": [
                 "-vvvvd",
                 "output.star",
-                "prueba.txt",
-                "file.json"
+                "file.json",
+                "prueba.txt"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

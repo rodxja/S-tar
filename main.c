@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
 
         case 'd':
             tableFile = loadTableFile(outputFile);
+            openTableFile(tableFile, "rb+");
             // validate that file exists
             // validate that file is not already deleted
             // deleteFile(tableFile, fileName);
@@ -101,6 +102,8 @@ int main(int argc, char *argv[])
 
                 delete (tableFile, fileName);
             }
+
+            closeTableFile(tableFile);
             break;
         
         case 'r':
@@ -111,7 +114,7 @@ int main(int argc, char *argv[])
                 return 1;
             }
             
-            for (int i = optind; i < argc; i++)
+            for (int i = 3; i < argc; i++)
             {
                 char *fileName = argv[i];
                 addFile(tableFile, fileName);

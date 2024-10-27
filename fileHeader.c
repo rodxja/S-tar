@@ -21,7 +21,6 @@ void setNameFileHeader(FileHeader *fileHeader, const char *name)
 
 void serializeFileHeader(FileHeader *fileHeader, FILE *file)
 {
-    logDebug("serialize %s", toStringFileHeader(fileHeader));
     fwrite(fileHeader, sizeof(FileHeader), 1, file);
 }
 
@@ -29,7 +28,6 @@ FileHeader *deserializeFileHeader(FILE *file)
 {
     FileHeader *fileHeader = newFileHeader();
     fread(fileHeader, sizeof(FileHeader), 1, file);
-    logDebug("deserialize %s", toStringFileHeader(fileHeader));
     return fileHeader;
 }
 

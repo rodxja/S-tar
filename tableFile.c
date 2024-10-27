@@ -60,6 +60,23 @@ void openTableFile(TableFile *tableFile, const char *mode)
     }
 }
 
+void closeTableFile(TableFile *tableFile)
+{
+    if (tableFile == NULL)
+    {
+        logError("Error: TableFile is null for closeTableFile\n");
+        return;
+    }
+
+    if (tableFile->file == NULL)
+    {
+        logError("Error: File is null for closeTableFile\n");
+        return;
+    }
+
+    fclose(tableFile->file);
+}
+
 // adds a new file into file headers and stored in disk directly
 void addFile(TableFile *tableFile, const char *fileName)
 {
@@ -504,6 +521,12 @@ void delete(TableFile *tableFile, const char *fileName)
         return;
     }
 
+    if (tableFile->file == NULL)
+    {
+        logError("Error: File is null for delete\n");
+        return;
+    }
+
     if (fileName == NULL)
     {
         logError("Error: File name is null for delete\n");
@@ -517,18 +540,11 @@ void delete(TableFile *tableFile, const char *fileName)
         return;
     }
 
-    // open the file
-    FILE *star = fopen(tableFile->fileName, "rb+");
-    if (star == NULL)
-    {
-        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
-        return;
-    }
-
     // sets the file as deleted
     fileHeader->isDeleted = 1;
     // decrease the files count
     tableFile->filesCount--;
+    tableFile->blockCount -= fileHeader->totalBlocks;
     // add into the free blocks
     // tableFile->freeBlocksHeader->last = fileHeader->last;
     tableFile->freeBlocksHeader->size += fileHeader->size;
@@ -537,63 +553,63 @@ void delete(TableFile *tableFile, const char *fileName)
     if (tableFile->freeBlocksHeader->first == -1)
     {
         tableFile->freeBlocksHeader->first = fileHeader->first;
-        tableFile->freeBlocksHeader->last = fileHeader->last;
     }
     else // when there are already free blocks
     {
         // seek the last block in free blocks
         int offset = getOffsetTableFile() + tableFile->freeBlocksHeader->last * (getOffsetFileBlock());
 
-        if (fseek(star, offset, SEEK_SET) != 0)
+        if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
-            fclose(star);
+            fclose(tableFile->file);
             return;
         }
 
         // read the last block
-        FileBlock *lastFreeBlock = deserializeFileBlock(star);
+        FileBlock *lastFreeBlock = deserializeFileBlock(tableFile->file);
 
         // go at the beginning of the current read block
-        if (fseek(star, offset, SEEK_SET) != 0)
+        if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
-            fclose(star);
+            fclose(tableFile->file);
             return;
         }
         lastFreeBlock->next = fileHeader->first;
 
         // write the last block
-        serializeFileBlock(lastFreeBlock, star);
+        serializeFileBlock(lastFreeBlock, tableFile->file);
 
         // close the file
     }
 
+    tableFile->freeBlocksHeader->last = fileHeader->last;
+
     // write the file header deleted
     int offsetFileHeader = sizeof(tableFile->fileName) + (fileHeader->index * sizeof(FileHeader));
-    if (fseek(star, offsetFileHeader, SEEK_SET) != 0)
+    if (fseek(tableFile->file, offsetFileHeader, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
-        fclose(star);
+        fclose(tableFile->file);
         return;
     }
+    serializeFileHeader(fileHeader, tableFile->file);
 
-    serializeFileHeader(fileHeader, star);
+    writeOrderedBlockList(tableFile, tableFile->freeBlocksHeader);
 
     // write file header for the free blocks
-    int fileHeaderOffset = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader));
-    if (fseek(star, fileHeaderOffset, SEEK_SET) != 0)
+    int offsetFreeBlocksHeader = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader)); // this is incorrect because now the list will be ordered
+    if (fseek(tableFile->file, offsetFreeBlocksHeader, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
-        fclose(star);
+        fclose(tableFile->file);
         return;
     }
+    serializeFileHeader(tableFile->freeBlocksHeader, tableFile->file);
 
-    serializeFileHeader(tableFile->freeBlocksHeader, star);
-    fwrite(&tableFile->filesCount, sizeof(int), 1, star);
-    tableFile->blockCount -= fileHeader->totalBlocks;
-    fwrite(&tableFile->blockCount, sizeof(int), 1, star);
-    fclose(star);
+    fwrite(&tableFile->filesCount, sizeof(int), 1, tableFile->file);
+    fwrite(&tableFile->blockCount, sizeof(int), 1, tableFile->file);
 }
 
 FileHeader *getFileHeader(TableFile *tableFile, const char *fileName)
@@ -867,4 +883,103 @@ int *getBlockList(TableFile *tableFile, FileHeader *fileHeader)
     }
 
     return blockList;
+}
+
+int *orderedBlockList(TableFile *tableFile, FileHeader *FileHeader)
+{
+    int *blockList = getBlockList(tableFile, FileHeader);
+    // order the list of blocks from smaller to bigger
+
+    for (int i = 0; i < FileHeader->totalBlocks; i++)
+    {
+        for (int j = i + 1; j < FileHeader->totalBlocks; j++)
+        {
+            if (blockList[i] > blockList[j])
+            {
+                int temp = blockList[i];
+                blockList[i] = blockList[j];
+                blockList[j] = temp;
+            }
+        }
+    }
+
+    return blockList;
+}
+
+void pack(TableFile *TableFile)
+{
+    // get list of freeBlocks
+    // order the list of freeBlocks
+
+    // with totalBlocks we can recreate a list of used blocks
+
+    // iterate over all file headers
+    // iterate over all blocks of the file header
+
+    // if the block in fileheader is less than the one in freeBlocks
+    // then realocate the block ok the fileHeade
+    // free the old block in freeBlocks
+}
+
+// this will write the ordered block list
+// and will udpate the first and last block in the file header
+void writeOrderedBlockList(TableFile *tableFile, FileHeader *fileHeader)
+{
+    // validate that file must be already open
+    if (tableFile == NULL)
+    {
+        logError("Error: TableFile is null for writeBlockList\n");
+        return;
+    }
+
+    if (fileHeader == NULL)
+    {
+        logError("Error: blockList is null for writeBlockList\n");
+        return;
+    }
+
+    if (tableFile->file == NULL)
+    {
+        logError("Error: File is null for writeBlockList\n");
+        return;
+    }
+
+    if (tableFile->file == NULL)
+    {
+        logError("Error: File is null for writeBlockList\n");
+        return;
+    }
+
+    int *blockList = orderedBlockList(tableFile, fileHeader);
+
+    int currentBlock = -1;
+    int nextBlock = -1;
+
+    fileHeader->first = blockList[0];
+    // iterate over the blockList
+    for (int i = 0; i < fileHeader->totalBlocks; i++)
+    {
+        currentBlock = blockList[i];
+        fileHeader->last = currentBlock;
+        // there are another block
+        if (i < fileHeader->totalBlocks - 1)
+        {
+            nextBlock = blockList[i + 1];
+        }
+        else
+        {
+            nextBlock = -1;
+        }
+
+        // move to the block
+        int offset = getOffsetTableFile() + currentBlock * (getOffsetFileBlock());
+        if (fseek(tableFile->file, offset, SEEK_SET) != 0)
+        {
+            logError("Error: seeking in source file '%s'.\n", fileHeader->name);
+            return;
+        }
+
+        // write the block
+        size_t bytesWritten = fwrite(&nextBlock, sizeof(nextBlock), 1, tableFile->file);
+    }
 }
