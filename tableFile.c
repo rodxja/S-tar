@@ -481,6 +481,7 @@ void listFiles(TableFile *tableFile)
             logInfo(toStringFileHeader(file));
             archivosListados++;
         }
+        // TODO : would be nice to list all blocks of the file
     }
 
     if (archivosListados == 0)

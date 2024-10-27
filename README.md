@@ -43,6 +43,7 @@ to run:
 
 - -t : list all files in <output_file>
     - <command_name> -t <output_file>
+    - <command_name> -t <output_file> <file_1> ... <file_n>, pending to implement
 
 - -d : deletes the files specified 
     - <command_name> -d <output_file> <file_1> ... <file_n>
