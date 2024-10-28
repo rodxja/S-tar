@@ -56,11 +56,11 @@ void delete(TableFile *tableFile, const char *fileName);
 void update(TableFile *tableFile, const char *fileName);
 void pack(TableFile *tableFile);
 
-int *getBlockList(TableFile *tableFile, FileHeader *fileHeader);
-int *orderBorderedBlockListlockList(TableFile *tableFile, FileHeader *fileHeader);
-void writeOrderedBlockList(TableFile *tableFile, FileHeader *fileHeader);
-
 // list files
 void listFiles(TableFile *tableFile);
+
+int *getBlockList(FileHeader *fileHeader, FILE *file);
+int *orderedBlockList(FileHeader *fileHeader, FILE *file);
+void writeOrderedBlockList(FileHeader *fileHeader, FILE *file);
 
 #endif // TABLEINFO_H
