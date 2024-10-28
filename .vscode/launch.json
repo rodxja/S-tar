@@ -34,8 +34,8 @@
             "args": [
                 "-vvvvcft",
                 "output.star",
-                "test/prueba.txt",
-                "test/file.json",
+                "test/garabatos.txt",
+                "test/Documentación_P2_SO.pdf",
                 "test/otro.txt"
             ],
             "stopAtEntry": false,

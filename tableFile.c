@@ -880,21 +880,24 @@ void pack(TableFile *tableFile) // also removes the deleted files
         int previousBlock = -1;
         int currentBlock = -1;
 
-        // set the first block of the file header
-        fileHeader->first = freeBlocks[0];
-
         int movedBlocks = 0;
         // iterate over all blocks of the file header
         // this iteration will remove and add a block from the freeBlocks
         for (int j = 0; j < fileHeader->totalBlocks; j++)
         {
-            fileHeader->last = freeBlocks[0];
             currentBlock = fileHeaderBlocks[j];
             int newPositionBlock = freeBlocks[0];
             if (newPositionBlock > currentBlock) // will never be equal because blocks has a unique number
             {
                 continue;
             }
+
+            if (j == 0)
+            {
+                fileHeader->first = newPositionBlock;
+            }
+
+            fileHeader->last = freeBlocks[0];
             movedBlocks++;
 
             // when previous is valid we need to go back and update its next block
