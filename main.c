@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    TableFile *tableFile;
+    TableFile *tableFile = NULL;
     char *options = argv[1];
     char *outputFile = argv[2];
 
@@ -50,6 +50,7 @@ int main(int argc, char *argv[])
         case 'c':
             tableFile = newTableFile(outputFile);
             // if c is the only option, writes the table file and exit
+            openTableFile(tableFile, "wb");
             create(tableFile, outputFile);
 
             break;
@@ -76,20 +77,22 @@ int main(int argc, char *argv[])
                 logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
+            openTableFile(tableFile, "rb");
+
             // TODO : pending to implement
             extractAllFiles(tableFile, ".");
             break;
 
         case 't':
-            tableFile = loadTableFile(outputFile);
-            openTableFile(tableFile, "rb");
             if (tableFile == NULL)
             {
-                logError("Error: no se pudo cargar el archivo %s\n", outputFile);
-                return 1;
+               tableFile =  loadTableFile(outputFile);
+            }
+            if (tableFile->file == NULL)
+            {
+                openTableFile(tableFile, "rb");
             }
             listFiles(tableFile);
-            closeTableFile(tableFile);
             break;
 
         case 'd':
@@ -104,8 +107,6 @@ int main(int argc, char *argv[])
 
                 delete (tableFile, fileName);
             }
-
-            closeTableFile(tableFile);
             break;
 
         case 'r':
@@ -115,6 +116,7 @@ int main(int argc, char *argv[])
                 logError("Error: no se pudo cargar el archivo %s\n", outputFile);
                 return 1;
             }
+            openTableFile(tableFile, "rb+");
 
             for (int i = 3; i < argc; i++)
             {
@@ -125,6 +127,13 @@ int main(int argc, char *argv[])
 
         case 'u':
             tableFile = loadTableFile(outputFile);
+            if (tableFile == NULL)
+            {
+                logError("Error: no se pudo cargar el archivo %s\n", outputFile);
+                return 1;
+            }
+
+            openTableFile(tableFile, "rb+");
             // validate that file exists
 
             for (int j = 3; j < argc; j++)
@@ -139,7 +148,6 @@ int main(int argc, char *argv[])
             tableFile = loadTableFile(outputFile);
             openTableFile(tableFile, "rb+");
             pack(tableFile);
-            closeTableFile(tableFile);
             break;
 
         default:
@@ -147,6 +155,8 @@ int main(int argc, char *argv[])
             return 1;
         }
     }
+
+    closeTableFile(tableFile);
 
     return 0;
 }

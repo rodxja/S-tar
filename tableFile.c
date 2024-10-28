@@ -135,23 +135,14 @@ void addFile(TableFile *tableFile, const char *fileName)
 
     setNameFileHeader(fileHeader, fileNameWithoutPath);
 
-    FILE *star = fopen(tableFile->fileName, "rb+");
-    if (star == NULL)
-    {
-        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
-        fclose(sourceFD);
-        return;
-    }
-
     // Write the file header to the table file
     int tableOffset = getOffsetTableFile();
 
     // moves over the table file to the end of the file headers
-    if (fseek(star, tableOffset, SEEK_SET) != 0)
+    if (fseek(tableFile->file, tableOffset, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
         fclose(sourceFD);
-        fclose(star);
         return;
     }
 
@@ -179,11 +170,10 @@ void addFile(TableFile *tableFile, const char *fileName)
 
         // always move from the beginning of the file
         int offset = getOffsetTableFile() + currentBlock * (getOffsetFileBlock());
-        if (fseek(star, offset, SEEK_SET) != 0)
+        if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", fileName);
             fclose(sourceFD);
-            fclose(star);
             return;
         }
 
@@ -196,7 +186,7 @@ void addFile(TableFile *tableFile, const char *fileName)
         if (bytesRead < BLOCK_SIZE)
         {
             fileBlock->next = -1;
-            serializeFileBlock(fileBlock, star);
+            serializeFileBlock(fileBlock, tableFile->file);
             break;
         }
 
@@ -205,42 +195,39 @@ void addFile(TableFile *tableFile, const char *fileName)
         // write the block to the table file .star
         //! Tener cuidado de escribir un bloque de tamaño menor al BLOCK_SIZE
         // ! Si el bloque es menor al BLOCK_SIZE, se debe llenar el espacio restante con 0
-        serializeFileBlock(fileBlock, star);
+        serializeFileBlock(fileBlock, tableFile->file);
     }
 
     // we need to update the star with the information of the file header
     // move to the beginning of the file. SEEK_SET
     // move to the position of the file header. fileHeaderOffset
     int fileHeaderOffset = sizeof(tableFile->fileName) + (fileHeader->index * sizeof(FileHeader));
-    if (fseek(star, fileHeaderOffset, SEEK_SET) != 0)
+    if (fseek(tableFile->file, fileHeaderOffset, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
         fclose(sourceFD);
-        fclose(star);
         return;
     }
 
     // write the file header
-    serializeFileHeader(fileHeader, star);
+    serializeFileHeader(fileHeader, tableFile->file);
 
     // TODO : return error code
     tableFile->filesCount++;
     // update filesCount in the table file
     int filesCountOffset = sizeof(tableFile->fileName) + ((FILES_NUM + 1) * sizeof(FileHeader));
-    if (fseek(star, filesCountOffset, SEEK_SET) != 0)
+    if (fseek(tableFile->file, filesCountOffset, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
         fclose(sourceFD);
-        fclose(star);
         return;
     }
 
-    fwrite(&tableFile->filesCount, sizeof(int), 1, star);
+    fwrite(&tableFile->filesCount, sizeof(int), 1, tableFile->file);
     // update blockCount in the table file
-    fwrite(&tableFile->blockCount, sizeof(int), 1, star);
+    fwrite(&tableFile->blockCount, sizeof(int), 1, tableFile->file);
 
     fclose(sourceFD);
-    fclose(star);
 }
 
 // this retrieves the file header to use, searches it there is one deleted, otherwise creates a new one
@@ -323,14 +310,6 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
         return;
     }
 
-    // TODO :  open it once and close it once
-    FILE *tarFile = fopen(tableFile->fileName, "rb");
-    if (tarFile == NULL)
-    {
-        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
-        return;
-    }
-
     int tableOffset = getOffsetTableFile();
 
     int filesToExtract = tableFile->filesCount;
@@ -343,10 +322,9 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
         }
 
         // moves over the table file to the end of the file headers
-        if (fseek(tarFile, tableOffset, SEEK_SET) != 0)
+        if (fseek(tableFile->file, tableOffset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
-            fclose(tarFile);
             return;
         }
 
@@ -363,7 +341,6 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
         if (outputFile == NULL)
         {
             logError("Error: opening output file '%s'.\n", outputFilePath);
-            fclose(tarFile);
             return;
         }
 
@@ -376,7 +353,7 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
 
             // always move from the beginning of the file
             int offset = getOffsetTableFile() + fileBlock->next * (getOffsetFileBlock());
-            if (fseek(tarFile, offset, SEEK_SET) != 0)
+            if (fseek(tableFile->file, offset, SEEK_SET) != 0)
             {
                 logError("Error: seeking in source file '%s'.\n", fileHeader->name);
                 fclose(outputFile);
@@ -388,13 +365,13 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
             // add bytesRead into deserializeFileBlock
             //
             free(fileBlock);
-            fileBlock = deserializeFileBlock(tarFile);
+            fileBlock = deserializeFileBlock(tableFile->file);
             if (fileBlock == NULL)
             {
                 break;
             }
 
-            if (ferror(tarFile))
+            if (ferror(tableFile->file))
             {
                 logError("Error: reading tar file '%s'.\n", tableFile->fileName);
                 return;
@@ -420,33 +397,30 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
         fclose(outputFile);
         filesToExtract--;
     }
-    fclose(tarFile);
 }
 
 // Function to serialize the TableFile structure
 void serializeTableFile(TableFile *tableFile, const char *outputFile)
 {
-    FILE *file = fopen(outputFile, "wb");
-    if (!file)
+    if (tableFile->file == NULL)
     {
         logError("Failed to open file for writing");
         return;
     }
 
-    fwrite(&tableFile->fileName, sizeof(tableFile->fileName), 1, file);
+    fwrite(&tableFile->fileName, sizeof(tableFile->fileName), 1, tableFile->file);
 
     // serialize file headers
     for (int i = 0; i < FILES_NUM; i++)
     {
-        serializeFileHeader(tableFile->fileHeader[i], file);
+        serializeFileHeader(tableFile->fileHeader[i], tableFile->file);
     }
 
     // serialize free blocks header
-    serializeFileHeader(tableFile->freeBlocksHeader, file);
+    serializeFileHeader(tableFile->freeBlocksHeader, tableFile->file);
 
-    fwrite(&tableFile->filesCount, sizeof(tableFile->filesCount), 1, file);
-    fwrite(&tableFile->blockCount, sizeof(tableFile->blockCount), 1, file);
-    fclose(file);
+    fwrite(&tableFile->filesCount, sizeof(tableFile->filesCount), 1, tableFile->file);
+    fwrite(&tableFile->blockCount, sizeof(tableFile->blockCount), 1, tableFile->file);
 }
 
 // Function to deserialize the TableFile structure
@@ -569,7 +543,6 @@ void delete(TableFile *tableFile, const char *fileName)
         if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
-            fclose(tableFile->file);
             return;
         }
 
@@ -580,7 +553,6 @@ void delete(TableFile *tableFile, const char *fileName)
         if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", tableFile->fileName);
-            fclose(tableFile->file);
             return;
         }
         lastFreeBlock->next = fileHeader->first;
@@ -598,7 +570,6 @@ void delete(TableFile *tableFile, const char *fileName)
     if (fseek(tableFile->file, offsetFileHeader, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
-        fclose(tableFile->file);
         return;
     }
     serializeFileHeader(fileHeader, tableFile->file);
@@ -610,7 +581,6 @@ void delete(TableFile *tableFile, const char *fileName)
     if (fseek(tableFile->file, offsetFreeBlocksHeader, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
-        fclose(tableFile->file);
         return;
     }
     serializeFileHeader(tableFile->freeBlocksHeader, tableFile->file);
@@ -709,23 +679,14 @@ void update(TableFile *tableFile, const char *fileName)
         return;
     }
 
-    FILE *star = fopen(tableFile->fileName, "rb+");
-    if (star == NULL)
-    {
-        logError("Error: opening tar file '%s'.\n", tableFile->fileName);
-        fclose(sourceFD);
-        return;
-    }
-
     // Write the file header to the table file
     int tableOffset = getOffsetTableFile();
 
     // moves over the table file to the end of the file headers
-    if (fseek(star, tableOffset, SEEK_SET) != 0)
+    if (fseek(tableFile->file, tableOffset, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
         fclose(sourceFD);
-        fclose(star);
         return;
     }
 
@@ -757,28 +718,26 @@ void update(TableFile *tableFile, const char *fileName)
         }
         // always move from the beginning of the file
         int offset = getOffsetTableFile() + currentBlock * (getOffsetFileBlock());
-        if (fseek(star, offset, SEEK_SET) != 0)
+        if (fseek(tableFile->file, offset, SEEK_SET) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", fileName);
             fclose(sourceFD);
-            fclose(star);
             return;
         }
 
         // this will be valid while the file has enough blocks
         int nextUpdateBlock;
-        size_t bytesReadNext = fread(&nextUpdateBlock, sizeof(nextUpdateBlock), 1, star);
+        size_t bytesReadNext = fread(&nextUpdateBlock, sizeof(nextUpdateBlock), 1, tableFile->file);
         if (bytesReadNext < 1)
         {
             logError("Error: reading next block\n");
             return;
         }
         // go back the read block
-        if (fseek(star, -sizeof(nextUpdateBlock), SEEK_CUR) != 0)
+        if (fseek(tableFile->file, -sizeof(nextUpdateBlock), SEEK_CUR) != 0)
         {
             logError("Error: seeking in source file '%s'.\n", fileName);
             fclose(sourceFD);
-            fclose(star);
             return;
         }
         // this is to get a new block if the update is greater than the original file
@@ -803,21 +762,19 @@ void update(TableFile *tableFile, const char *fileName)
                 {
                     // move to the last block
                     int offsetLastBlock = getOffsetTableFile() + tableFile->freeBlocksHeader->last * getOffsetFileBlock();
-                    if (fseek(star, offsetLastBlock, SEEK_SET) != 0)
+                    if (fseek(tableFile->file, offsetLastBlock, SEEK_SET) != 0)
                     {
                         logError("Error: seeking in source file '%s'.\n", fileName);
                         fclose(sourceFD);
-                        fclose(star);
                         return;
                     }
 
                     // write the next block
-                    size_t bytesWritten = fwrite(&nextUpdateBlock, sizeof(nextUpdateBlock), 1, star);
+                    size_t bytesWritten = fwrite(&nextUpdateBlock, sizeof(nextUpdateBlock), 1, tableFile->file);
                     if (bytesWritten < 1)
                     {
                         logError("Error: writing next block\n");
                         fclose(sourceFD);
-                        fclose(star);
                         return;
                     }
                 }
@@ -826,20 +783,19 @@ void update(TableFile *tableFile, const char *fileName)
                 tableFile->freeBlocksHeader->totalBlocks += oldTotalBlocks - fileHeader->totalBlocks;
                 tableFile->freeBlocksHeader->last = last;
                 int offsetFreeBlocksHeader = sizeof(tableFile->fileName) + (FILES_NUM * sizeof(FileHeader));
-                if (fseek(star, offsetFreeBlocksHeader, SEEK_SET) != 0)
+                if (fseek(tableFile->file, offsetFreeBlocksHeader, SEEK_SET) != 0)
                 {
                     logError("Error: seeking in source file '%s'.\n", fileName);
                     fclose(sourceFD);
-                    fclose(star);
                     return;
                 }
 
-                serializeFileHeader(tableFile->freeBlocksHeader, star);
+                serializeFileHeader(tableFile->freeBlocksHeader, tableFile->file);
             }
             else
             {
                 fileBlock->next = -1;
-                serializeFileBlock(fileBlock, star);
+                serializeFileBlock(fileBlock, tableFile->file);
             }
             break;
         }
@@ -847,41 +803,38 @@ void update(TableFile *tableFile, const char *fileName)
         currentBlock = nextUpdateBlock;
         fileBlock->next = currentBlock;
         // write the block to the table file .star
-        serializeFileBlock(fileBlock, star);
+        serializeFileBlock(fileBlock, tableFile->file);
     }
 
     // we need to update the star with the information of the file header
     // move to the beginning of the file. SEEK_SET
     // move to the position of the file header. fileHeaderOffset
     int fileHeaderOffset = sizeof(tableFile->fileName) + (fileHeader->index * sizeof(FileHeader));
-    if (fseek(star, fileHeaderOffset, SEEK_SET) != 0)
+    if (fseek(tableFile->file, fileHeaderOffset, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
         fclose(sourceFD);
-        fclose(star);
         return;
     }
 
     // write the file header
-    serializeFileHeader(fileHeader, star);
+    serializeFileHeader(fileHeader, tableFile->file);
 
     // update filesCount in the table file
     int filesCountOffset = sizeof(tableFile->fileName) + ((FILES_NUM + 1) * sizeof(FileHeader)) + sizeof(int);
-    if (fseek(star, filesCountOffset, SEEK_SET) != 0)
+    if (fseek(tableFile->file, filesCountOffset, SEEK_SET) != 0)
     {
         logError("Error: seeking in source file '%s'.\n", fileName);
         fclose(sourceFD);
-        fclose(star);
         return;
     }
 
     tableFile->blockCount += fileHeader->totalBlocks;
 
     // update blockCount in the table file
-    fwrite(&tableFile->blockCount, sizeof(int), 1, star);
+    fwrite(&tableFile->blockCount, sizeof(int), 1, tableFile->file);
 
     fclose(sourceFD);
-    fclose(star);
 }
 
 void pack(TableFile *tableFile) // also removes the deleted files
