@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define BLOCK_SIZE 64 // 256* 1024
+#define BLOCK_SIZE 256 * 1024
 
 typedef struct
 {

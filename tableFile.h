@@ -6,7 +6,7 @@
 #include "fileHeader.h"
 #include "fileBlock.h"
 
-#define FILES_NUM 5 // 250
+#define FILES_NUM 250
 
 typedef struct
 {
@@ -62,7 +62,6 @@ void listFiles(TableFile *tableFile);
 int *getBlockList(FileHeader *fileHeader, FILE *file);
 int *orderedBlockList(FileHeader *fileHeader, FILE *file);
 void writeOrderedBlockList(FileHeader *fileHeader, FILE *file);
-
 
 char *toStringTableFile(TableFile *tableFile);
 
