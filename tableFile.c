@@ -53,6 +53,7 @@ void openTableFile(TableFile *tableFile, const char *mode)
         return;
     }
 
+    logInfo("Opening table file '%s' with mode '%s'.\n", tableFile->fileName, mode);
     tableFile->file = fopen(tableFile->fileName, mode);
     if (tableFile->file == NULL)
     {
@@ -197,6 +198,8 @@ void addFile(TableFile *tableFile, const char *fileName)
         // ! Si el bloque es menor al BLOCK_SIZE, se debe llenar el espacio restante con 0
         serializeFileBlock(fileBlock, tableFile->file);
     }
+
+    logInfo("File '%s' added to table file '%s'.\n", fileName, tableFile->fileName);
 
     // we need to update the star with the information of the file header
     // move to the beginning of the file. SEEK_SET
@@ -395,6 +398,7 @@ void extractAllFiles(TableFile *tableFile, const char *outputDirectory)
             }
         }
         fclose(outputFile);
+        logInfo("File '%s' extracted to '%s'.\n", fileHeader->name, outputFilePath);
         filesToExtract--;
     }
 }
@@ -408,6 +412,7 @@ void serializeTableFile(TableFile *tableFile, const char *outputFile)
         return;
     }
 
+    logInfo("Serializing table file '%s'.\n", toStringTableFile(tableFile));
     fwrite(&tableFile->fileName, sizeof(tableFile->fileName), 1, tableFile->file);
 
     // serialize file headers
@@ -466,7 +471,7 @@ void listFiles(TableFile *tableFile)
         return;
     }
 
-    printf("Archivos en la tabla:\n");
+    logInfo("Archivos en la tabla:\n");
 
     int archivosListados = 0;
 
@@ -490,7 +495,7 @@ void listFiles(TableFile *tableFile)
 
     if (archivosListados == 0)
     {
-        printf("No hay archivos en la tabla\n");
+        logInfo("No hay archivos en la tabla\n");
     }
 }
 
@@ -562,6 +567,8 @@ void delete(TableFile *tableFile, const char *fileName)
 
         // close the file
     }
+
+    logInfo("File '%s' deleted\n", fileName);
 
     tableFile->freeBlocksHeader->last = fileHeader->last;
 
@@ -754,6 +761,7 @@ void update(TableFile *tableFile, const char *fileName)
         {
             if (oldTotalBlocks > fileHeader->totalBlocks)
             {
+                logDebug("File '%s' updated has less block.\n", fileName);
                 if (tableFile->freeBlocksHeader->first == -1)
                 {
                     tableFile->freeBlocksHeader->first = nextUpdateBlock;
@@ -794,6 +802,8 @@ void update(TableFile *tableFile, const char *fileName)
             }
             else
             {
+
+                logDebug("File '%s' updated has more block.\n", fileName);
                 fileBlock->next = -1;
                 serializeFileBlock(fileBlock, tableFile->file);
             }
@@ -805,6 +815,8 @@ void update(TableFile *tableFile, const char *fileName)
         // write the block to the table file .star
         serializeFileBlock(fileBlock, tableFile->file);
     }
+
+    logInfo("File '%s' updated in table file '%s'.\n", fileName, tableFile->fileName);
 
     // we need to update the star with the information of the file header
     // move to the beginning of the file. SEEK_SET
@@ -841,6 +853,7 @@ void pack(TableFile *tableFile) // also removes the deleted files
 {
     // get list of freeBlocks, this list will be ordered from smaller to bigger
     int *freeBlocks = getBlockList(tableFile->freeBlocksHeader, tableFile->file);
+    logInfo("Packing table file '%s'.\n", tableFile->fileName);
 
     // iterate over all file headers
     for (int i = 0; i < FILES_NUM; i++)
@@ -964,6 +977,7 @@ void pack(TableFile *tableFile) // also removes the deleted files
 
     // at this moment all free blocks are at the end of the file
     // so we need to update the freeBlocksHeader
+    logInfo("Free blocks: %d\n", tableFile->freeBlocksHeader->totalBlocks);
     resetFileHeader(tableFile->freeBlocksHeader);
 
     // write the freeBlocksHeader
@@ -1118,4 +1132,14 @@ void writeOrderedBlockList(FileHeader *fileHeader, FILE *file)
         // write the block
         size_t bytesWritten = fwrite(&nextBlock, sizeof(nextBlock), 1, file);
     }
+}
+
+char *toStringTableFile(TableFile *tableFile)
+{
+    char *result = (char *)malloc(1000);
+    snprintf(result, 1000, "TableFile: %s\n", tableFile->fileName);
+    // add number of blocks and files
+    snprintf(result, 1000, "%sBlocks: %d\n", result, tableFile->blockCount);
+    snprintf(result, 1000, "%sFiles: %d\n", result, tableFile->filesCount);
+    return result;
 }

@@ -63,4 +63,7 @@ int *getBlockList(FileHeader *fileHeader, FILE *file);
 int *orderedBlockList(FileHeader *fileHeader, FILE *file);
 void writeOrderedBlockList(FileHeader *fileHeader, FILE *file);
 
+
+char *toStringTableFile(TableFile *tableFile);
+
 #endif // TABLEINFO_H

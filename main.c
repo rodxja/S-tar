@@ -9,7 +9,6 @@
 
 int main(int argc, char *argv[])
 {
-    logAll("argc: %d\n", argc);
     // argv[0] will store the command name 'star'
     // argv[1] will store the option (e.g. -cvf)
     // argv[2] will store the output file name

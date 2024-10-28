@@ -35,7 +35,6 @@
                 "-vvvvcft",
                 "output.star",
                 "test/prueba.txt",
-                "test/garabatos.txt",
                 "test/file.json",
                 "test/otro.txt"
             ],
