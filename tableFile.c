@@ -99,7 +99,19 @@ void addFile(TableFile *tableFile, const char *fileName)
         return;
     }
 
-    FileHeader *exists = getFileHeader(tableFile, fileName);
+    // remove the path from the file name
+    const char *lastSlash = strrchr(fileName, '/');
+    const char *fileNameWithoutPath;
+    if (lastSlash != NULL)
+    {
+        fileNameWithoutPath = lastSlash + 1;
+    }
+    else
+    {
+        fileNameWithoutPath = fileName;
+    }
+
+    FileHeader *exists = getFileHeader(tableFile, fileNameWithoutPath);
     if (exists != NULL)
     {
         logError("Error: File '%s' already exists\n", fileName);
@@ -120,14 +132,8 @@ void addFile(TableFile *tableFile, const char *fileName)
         pclose(sourceFD);
         return;
     }
-    // remove the path from the file name
-    const char *lastSlash = strrchr(fileName, '/');
-    if (lastSlash != NULL)
-    {
-        fileName = lastSlash + 1;
-    }
 
-    setNameFileHeader(fileHeader, fileName);
+    setNameFileHeader(fileHeader, fileNameWithoutPath);
 
     FILE *star = fopen(tableFile->fileName, "rb+");
     if (star == NULL)
