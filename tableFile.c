@@ -976,17 +976,21 @@ void pack(TableFile *tableFile) // also removes the deleted files
 
             // as first block was used now i need to move the freeBlocks[i+1] into freeBlocks[i]
             // and once current block has a space in freeBlocks, then i need to add and stop
-            for (int k = 0; k < tableFile->freeBlocksHeader->totalBlocks - 1; k++)
+
+            // move k +1 to k
+            // insert currentBlock when currentBlock < freeBlocks[k+1]
+            // sets currentBlock as the last block if it is bigger than the last block
+            for (int k = 0; k < tableFile->freeBlocksHeader->totalBlocks; k++)
             {
-                if (currentBlock < freeBlocks[k + 1])
+                if (currentBlock < freeBlocks[k])
                 {
                     freeBlocks[k] = currentBlock;
                     break;
                 }
                 freeBlocks[k] = freeBlocks[k + 1];
-                if (k == tableFile->freeBlocksHeader->totalBlocks - 2)
+                if (k == tableFile->freeBlocksHeader->totalBlocks - 1)
                 {
-                    freeBlocks[k + 1] = currentBlock;
+                    freeBlocks[k] = currentBlock;
                 }
             }
             previousBlock = newPositionBlock;
